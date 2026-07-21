@@ -12,7 +12,6 @@ import { useFarms } from '@/features/farms/api/farmsApi';
 import { useFields } from '@/features/fields/api/fieldsApi';
 import { useProfile, useMyFarmRoles } from '@/features/auth/api/profileApi';
 import { db } from '@/offline/db';
-import { apiClient } from '@/lib/apiClient';
 
 // Core APIs
 import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/features/activities/api/activityApi';

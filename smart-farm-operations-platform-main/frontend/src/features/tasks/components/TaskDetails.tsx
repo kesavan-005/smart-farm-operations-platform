@@ -12,7 +12,6 @@ import {
   Flame,
   FileText,
   MessageSquare,
-  Paperclip,
   History,
   Plus,
   CheckSquare,
@@ -21,6 +20,7 @@ import {
 import type { FarmTask, TaskStatus, TaskPriority } from '@/types/task';
 import { Button } from '@/components/ui/button';
 import { useProfile, useMyFarmRoles } from '@/features/auth/api/profileApi';
+import { useFarms } from '@/features/farms/api/farmsApi';
 import { 
   useTaskComments, 
   useAddTaskComment, 
@@ -55,10 +55,16 @@ export default function TaskDetails({
   const { t, i18n } = useTranslation(['tasks', 'common']);
   const isTa = i18n.language === 'ta';
 
-  // Role resolution
+  // Role resolution (same pattern as OperationsScreen)
   const { data: profile } = useProfile();
-  const { isOwner, isAdmin, isManager, isSupervisor, isWorker } = useMyFarmRoles(task.farmId);
-  const canModifyChecklist = isAdmin || isOwner || isManager; 
+  const { data: farms = [] } = useFarms();
+  const { data: farmRoles = [] } = useMyFarmRoles();
+  const activeFarm = farms.find(f => f.id === task.farmId);
+  const userRoleOnFarm = task.farmId ? (farmRoles.find((r: any) => r.farmId === task.farmId)?.role || 'VIEWER') : 'VIEWER';
+  const isOwner = task.farmId ? (profile?.id === activeFarm?.ownerUserId) : false;
+  const isAdmin = profile?.role === 'ADMIN';
+  const isManager = userRoleOnFarm === 'MANAGER';
+  const canModifyChecklist = isAdmin || isOwner || isManager;
 
   // Sub-tab State
   const [activeSubTab, setActiveSubTab] = useState<'checklist' | 'comments' | 'attachments' | 'history'>('checklist');
@@ -259,11 +265,11 @@ export default function TaskDetails({
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
-                            checked={item.completed}
+                            checked={item.checked}
                             onChange={() => toggleTaskChecklistItem.mutate(item.id)}
                             className="w-4.5 h-4.5 rounded border-input text-primary focus:ring-primary focus:ring-offset-background cursor-pointer"
                           />
-                          <span className={`text-sm font-semibold ${item.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          <span className={`text-sm font-semibold ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                             {item.itemName}
                           </span>
                         </div>
@@ -294,7 +300,7 @@ export default function TaskDetails({
                     {comments.map(comment => (
                       <div key={comment.id} className="p-3 bg-muted/20 border border-border/40 rounded-xl space-y-1">
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="font-bold text-foreground">{comment.createdByName}</span>
+                          <span className="font-bold text-foreground">{comment.commenterName}</span>
                           <span className="text-muted-foreground/60">{new Date(comment.createdAt).toLocaleString(i18n.language)}</span>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{comment.commentText}</p>
@@ -402,14 +408,16 @@ export default function TaskDetails({
                         {/* Circle marker */}
                         <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background" />
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="font-bold text-foreground">{item.createdByName}</span>
+                          <span className="font-bold text-foreground">{item.changedByName || 'System'}</span>
                           <span className="text-muted-foreground/60">{new Date(item.createdAt).toLocaleString(i18n.language)}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {item.actionType === 'STATUS_CHANGE' ? (
-                            isTa ? `நிலை மாற்றம்: ${item.oldValue || 'None'} ➜ ${item.newValue}` : `Status changed from ${item.oldValue || 'None'} to ${item.newValue}`
+                          {item.previousStatus || item.newStatus ? (
+                            isTa
+                              ? `நிலை மாற்றம்: ${item.previousStatus || 'None'} ➜ ${item.newStatus || ''}`
+                              : `Status changed from ${item.previousStatus || 'None'} to ${item.newStatus || ''}`
                           ) : (
-                            item.notes || 'Activity recorded'
+                            item.remarks || 'Activity recorded'
                           )}
                         </p>
                       </div>
