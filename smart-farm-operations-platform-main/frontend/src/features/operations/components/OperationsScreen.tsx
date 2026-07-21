@@ -30,15 +30,24 @@ export default function OperationsScreen() {
   const { i18n } = useTranslation(['tasks', 'common']);
   const isTa = i18n.language === 'ta';
 
-  // 1. Resolve Active Farm
+  // 1. Resolve Active Farm — auto-select first farm reactively when farms load
   const { data: farms = [] } = useFarms();
   const [selectedFarmId, setSelectedFarmId] = useState<string>('');
   const farmId = selectedFarmId || (farms[0]?.id ?? '');
   const activeFarm = farms.find(f => f.id === farmId);
 
+  // Derived workflow guards — drives button enabled/disabled state
+  const hasFarms = farms.length > 0;
+
+  // Auto-select the first farm reactively (no page refresh needed after farm creation)
+  useEffect(() => {
+    if (farms.length > 0 && !selectedFarmId) {
+      setSelectedFarmId(farms[0]?.id ?? '');
+    }
+  }, [farms]);
+
   // 2. Fetch dependencies
   const { data: fields = [] } = useFields(farmId || '00000000-0000-0000-0000-000000000000');
-
 
   // Roles & Permissions
   const { data: profile } = useProfile();
@@ -59,9 +68,12 @@ export default function OperationsScreen() {
     }
   }, [isWorker]);
 
-  // 4. Fetch Operations Center Data
+  // 4. Fetch Operations Center Data (only when a farm is selected)
   const { data: activities = [] } = useActivities({ farmId });
   const { data: tasks = [] } = useTasks({ farmId });
+
+  // Derived: task creation requires at least one activity to exist first
+  const hasActivities = activities.length > 0;
 
   // Mutations
   const createActivity = useCreateActivity(farmId);
@@ -266,7 +278,22 @@ export default function OperationsScreen() {
         {/* T2: ACTIVITIES */}
         {activeTab === 'activities' && (
           <div>
-            {isCreatingActivity ? (
+            {/* Guard: No farms exist yet */}
+            {!hasFarms ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-amber-500" />
+                </div>
+                <h3 className="text-base font-bold text-foreground">
+                  {isTa ? 'முதலில் ஒரு பண்ணையை உருவாக்கவும்' : 'Create a Farm First'}
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  {isTa
+                    ? 'செயல்பாடுகளை உருவாக்க குறைந்தது ஒரு பண்ணை தேவை. பண்ணை மேலாண்மை பகுதிக்கு சென்று பண்ணையை உருவாக்கவும்.'
+                    : 'You need at least one farm before creating activities. Go to Farm Management to create your first farm.'}
+                </p>
+              </div>
+            ) : isCreatingActivity ? (
               <ActivityForm
                 farms={farms}
                 onSubmit={async (data) => {
@@ -317,7 +344,7 @@ export default function OperationsScreen() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-base font-bold text-foreground">{isTa ? 'செயல்பாடுகள் மேலாண்மை' : 'Activities Management'}</h3>
-                  {canManage && (
+                  {canManage && hasFarms && (
                     <button
                       onClick={() => setIsCreatingActivity(true)}
                       className="h-8.5 px-3.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs flex items-center justify-center gap-1 shadow"
@@ -334,7 +361,7 @@ export default function OperationsScreen() {
                   setFilters={() => {}}
                   onSelectActivity={setSelectedActivityId}
                   onCreateNew={() => setIsCreatingActivity(true)}
-                  canCreate={canManage}
+                  canCreate={canManage && hasFarms}
                 />
               </div>
             )}
@@ -344,7 +371,40 @@ export default function OperationsScreen() {
         {/* T3: TASKS */}
         {activeTab === 'tasks' && (
           <div>
-            {isCreatingTask ? (
+            {/* Guard: No farms exist yet */}
+            {!hasFarms ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-amber-500" />
+                </div>
+                <h3 className="text-base font-bold text-foreground">
+                  {isTa ? 'முதலில் ஒரு பண்ணையை உருவாக்கவும்' : 'Create a Farm First'}
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  {isTa ? 'பணிகளை உருவாக்க குறைந்தது ஒரு பண்ணை தேவை.' : 'You need at least one farm to create tasks.'}
+                </p>
+              </div>
+            ) : !hasActivities && canManage ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-base font-bold text-foreground">
+                  {isTa ? 'முதலில் ஒரு செயல்பாட்டை உருவாக்கவும்' : 'Create an Activity First'}
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  {isTa
+                    ? 'ஒவ்வொரு பணியும் ஒரு செயல்பாட்டின் கீழ் வர வேண்டும். செயல்பாடுகள் தாவலுக்கு சென்று முதலில் ஒரு செயல்பாட்டை உருவாக்கவும்.'
+                    : 'Every task must belong to an Activity. Go to the Activities tab and create at least one activity first.'}
+                </p>
+                <button
+                  onClick={() => setActiveTab('activities')}
+                  className="h-9 px-5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
+                >
+                  {isTa ? 'செயல்பாடுகள் தாவலுக்கு செல்' : 'Go to Activities Tab'}
+                </button>
+              </div>
+            ) : isCreatingTask ? (
               <TaskForm
                 farms={farms}
                 onSubmit={async (data) => {
@@ -397,7 +457,7 @@ export default function OperationsScreen() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-base font-bold text-foreground">{isTa ? 'பணிகள் பட்டியல்' : 'Tasks Checklist'}</h3>
-                  {canManage && (
+                  {canManage && hasActivities && (
                     <button
                       onClick={() => setIsCreatingTask(true)}
                       className="h-8.5 px-3.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs flex items-center justify-center gap-1 shadow"
@@ -416,7 +476,7 @@ export default function OperationsScreen() {
                     }
                   }}
                   onCreateNew={() => setIsCreatingTask(true)}
-                  canCreate={canManage}
+                  canCreate={canManage && hasActivities}
                 />
               </div>
             )}

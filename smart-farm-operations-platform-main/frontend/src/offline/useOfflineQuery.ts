@@ -71,10 +71,11 @@ export function useOfflineQuery<TData extends { id: string }>(
       return filtered as TData[];
     },
 
-    staleTime: staleTime ?? 5 * 60 * 1000, // Default: 5 minutes
+    staleTime: staleTime ?? 30 * 1000, // 30 seconds — short enough for new farms to appear quickly
     gcTime: Infinity, // Never garbage collect — critical for offline support
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchOnMount: true,
 
     ...queryOptions,
   });
