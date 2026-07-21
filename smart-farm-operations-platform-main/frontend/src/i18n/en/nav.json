@@ -1,0 +1,23 @@
+{
+  "dashboard": "Dashboard",
+  "farms": "Farms",
+  "inventory": "Inventory",
+  "finance": "Finance",
+  "more": "More",
+  "fields": "Fields",
+  "crops": "Crops",
+  "activities": "Activities",
+  "tasks": "Tasks",
+  "operations": "Management Operations",
+  "labour": "Labour",
+  "expenses": "Expenses",
+  "income": "Income",
+  "harvest": "Harvest",
+  "reports": "Reports",
+  "weather": "Weather",
+  "notifications": "Notifications",
+  "settings": "Settings",
+  "profile": "Profile",
+  "admin": "Admin",
+  "map": "Farm Map"
+}

@@ -1,0 +1,138 @@
+{
+  "dashboard": {
+    "title": "Financial Control Center",
+    "subtitle": "Real-time smart farm operational cash flows, budgets, and predictive AI insights",
+    "alerts": "Financial Alerts",
+    "alertsSubtitle": "Urgent conditions requiring managers' attention",
+    "aiInsights": "AI Financial Insights",
+    "aiInsightsSubtitle": "Rule-based predictive analysis recommendations",
+    "budgetUtilization": "Active Budgets Utilization",
+    "budgetUtilizationSubtitle": "Spent progress for category allocations",
+    "topExpenses": "Top Expenditures",
+    "topExpensesSubtitle": "High spend allocations",
+    "topRevenue": "Top Revenue Sources",
+    "topRevenueSubtitle": "Top crop income contributors",
+    "recentActivities": "Recent Financial Activities",
+    "recentActivitiesSubtitle": "Live transaction timeline updates"
+  },
+  "cards": {
+    "revenueToday": "Revenue Today",
+    "revenueMonth": "Revenue This Month",
+    "expensesToday": "Expenses Today",
+    "expensesMonth": "Expenses This Month",
+    "netProfit": "Net Profit",
+    "cashAvailable": "Cash Available",
+    "inventoryValue": "Inventory Value",
+    "outstandingPayments": "Outstanding Payments",
+    "budgetUtilization": "Budget Util.",
+    "roi": "Yield ROI"
+  },
+  "buttons": {
+    "recordMovement": "Record Movement",
+    "goToLedger": "Go to Ledger",
+    "cancel": "Cancel",
+    "saveLimit": "Save Limit",
+    "saveTransaction": "Save Transaction",
+    "saving": "Saving...",
+    "confirmDelete": "Are you sure you want to delete this?",
+    "exportCsv": "Export CSV",
+    "searchPlaceholder": "Search ledger transactions...",
+    "createBudget": "Create Budget",
+    "allTypes": "All Types",
+    "allCategories": "All Categories"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "syncing": "Syncing",
+    "lastSync": "Sync Time",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "badges": {
+    "assetValue": "Asset Value",
+    "receivables": "Receivables",
+    "stable": "Stable",
+    "used": "Used",
+    "efficiency": "Efficiency",
+    "overrun": "Overrun"
+  },
+  "alerts": {
+    "operationalStable": "Operational Security Stable",
+    "operationalStableDescription": "All category budgets are running under limit guidelines.",
+    "negativeCash": "Negative Cash Balance",
+    "negativeCashDescription": "Current cash margins are below ₹0.",
+    "budgetExceeded": "Budget Exceeded",
+    "budgetExceededDescription": "Budget limit exceeded for {{category}}."
+  },
+  "empty": {
+    "noTransactions": "No transactions logged yet.",
+    "noRevenue": "No revenue recorded.",
+    "noExpenses": "No expenses logged yet",
+    "noAlerts": "No alerts active",
+    "noInsights": "No AI insights generated yet.",
+    "noBudgets": "No budget targets active. Define allocations to log expense thresholds.",
+    "noActivity": "No recent activities found."
+  },
+  "nav": {
+    "dashboard": "Control Dashboard",
+    "transactions": "Transaction Ledger",
+    "accounting": "Advanced Accounting",
+    "journal": "General Journal Entries",
+    "budgets": "Budget Limits Control"
+  },
+  "form": {
+    "recordTitle": "Record Financial Movement",
+    "recordSubtitle": "Log a single transaction detail manually",
+    "transactionType": "Transaction Type",
+    "category": "Category",
+    "amount": "Amount",
+    "description": "Description",
+    "paymentMethod": "Payment Method",
+    "status": "Status",
+    "date": "Transaction Date",
+    "budgetTitle": "Create Budget Allotment",
+    "budgetSubtitle": "Define categories, limits, and operational cost margins",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "limit": "Budget Limit",
+    "typeRevenue": "Revenue",
+    "typeExpense": "Expense",
+    "typeLiability": "Liability",
+    "typeAsset": "Asset"
+  },
+  "ledger": {
+    "category": "Category",
+    "type": "Type",
+    "amount": "Amount",
+    "method": "Method",
+    "status": "Status",
+    "date": "Date",
+    "description": "Description",
+    "actions": "Actions",
+    "spent": "Spent",
+    "limit": "Limit",
+    "remaining": "Remaining"
+  },
+  "accounting": {
+    "title": "Double-entry Ledger Journals",
+    "subtitle": "Chronological general ledger accounts recording credits and debits",
+    "account": "Account Name",
+    "type": "Entry Type",
+    "amount": "Amount",
+    "date": "Created Date",
+    "debit": "Debit",
+    "credit": "Credit",
+    "noEntries": "No journal entries found."
+  },
+  "validation": {
+    "categoryRequired": "Category is required",
+    "amountPositive": "Amount must be greater than 0",
+    "paymentMethodRequired": "Payment method is required",
+    "statusRequired": "Status is required",
+    "dateRequired": "Transaction date is required",
+    "limitPositive": "Limit must be positive",
+    "startDateRequired": "Start date is required",
+    "endDateRequired": "End date is required"
+  }
+}
