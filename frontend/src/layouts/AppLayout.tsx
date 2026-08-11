@@ -8,49 +8,18 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Tractor, Package, Wallet, Search, Bell, Moon, Sun,
   LogOut, Settings, HelpCircle,
-  Leaf, Menu, X, Monitor, PanelLeftClose, PanelLeft
+  Leaf, Menu, X, Monitor, PanelLeftClose, PanelLeft, HeartPulse
 } from 'lucide-react';
 
 import { useSyncStatus } from '@/offline';
 import { useLanguageStore } from '@/store/languageStore';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
+import { useFarms } from '@/features/farms/api/farmsApi';
 
 interface AppLayoutProps {
   children?: ReactNode;
 }
-
-// Navigation structure with groups
-const NAV_GROUPS = [
-  {
-    label: 'nav:main',
-    items: [
-      { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard' },
-      { path: '/farms', icon: Tractor, labelKey: 'nav:farms' },
-    ],
-  },
-  {
-    label: 'nav:management',
-    items: [
-      { path: '/inventory', icon: Package, labelKey: 'nav:inventory' },
-      { path: '/expenses', icon: Wallet, labelKey: 'nav:finance' },
-    ],
-  },
-  {
-    label: 'nav:system',
-    items: [
-      { path: '/notifications', icon: Bell, labelKey: 'nav:notifications' },
-      { path: '/settings', icon: Settings, labelKey: 'nav:settings' },
-      { path: '/help', icon: HelpCircle, labelKey: 'nav:help' },
-    ],
-  },
-] as const;
-
-const MOBILE_NAV = [
-  { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard' },
-  { path: '/inventory', icon: Package, labelKey: 'nav:inventory' },
-  { path: '/settings', icon: Menu, labelKey: 'nav:more' },
-] as const;
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation(['common', 'nav']);
@@ -60,6 +29,44 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { toggleLanguage, language } = useLanguageStore();
   const { user, clearSession } = useAuthStore();
   const { theme, setTheme, resolved } = useThemeStore();
+  
+  const { data: farms } = useFarms();
+  const activeFarmId = user?.farmId || farms?.[0]?.id;
+  const farmHealthPath = activeFarmId ? `/farms/${activeFarmId}/health` : '/onboarding';
+
+  // Navigation structure with groups
+  const NAV_GROUPS = [
+    {
+      label: 'nav:main',
+      items: [
+        { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard', defaultLabel: 'Dashboard' },
+        { path: farmHealthPath, icon: HeartPulse, labelKey: 'nav:farmHealth', defaultLabel: 'Farm Health' },
+        { path: '/farms', icon: Tractor, labelKey: 'nav:farms', defaultLabel: 'Farms' },
+      ],
+    },
+    {
+      label: 'nav:management',
+      items: [
+        { path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory' },
+        { path: '/expenses', icon: Wallet, labelKey: 'nav:finance', defaultLabel: 'Finance' },
+      ],
+    },
+    {
+      label: 'nav:system',
+      items: [
+        { path: '/notifications', icon: Bell, labelKey: 'nav:notifications', defaultLabel: 'Notifications' },
+        { path: '/settings', icon: Settings, labelKey: 'nav:settings', defaultLabel: 'Settings' },
+        { path: '/help', icon: HelpCircle, labelKey: 'nav:help', defaultLabel: 'Help' },
+      ],
+    },
+  ];
+
+  const MOBILE_NAV = [
+    { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard', defaultLabel: 'Dashboard' },
+    { path: farmHealthPath, icon: HeartPulse, labelKey: 'nav:farmHealth', defaultLabel: 'Farm Health' },
+    { path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory' },
+    { path: '/settings', icon: Menu, labelKey: 'nav:more', defaultLabel: 'More' },
+  ];
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -114,11 +121,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </p>
               )}
               <div className="space-y-0.5">
-                {group.items.map(({ path, icon: Icon, labelKey }) => (
+                {group.items.map(({ path, icon: Icon, labelKey, defaultLabel }) => (
                   <NavLink
                     key={path}
                     to={path}
-                    title={isSidebarCollapsed ? t(labelKey) : undefined}
+                    title={isSidebarCollapsed ? t(labelKey, defaultLabel) : undefined}
                     className={({ isActive }) =>
                       `group relative flex items-center gap-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                         isSidebarCollapsed ? 'justify-center h-10 w-10 mx-auto' : 'px-3 h-9'
@@ -135,7 +142,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-primary rounded-r-full" />
                         )}
                         <Icon className="w-4 h-4 shrink-0" />
-                        {!isSidebarCollapsed && <span>{t(labelKey)}</span>}
+                        {!isSidebarCollapsed && <span>{t(labelKey, defaultLabel)}</span>}
                       </>
                     )}
                   </NavLink>
@@ -298,7 +305,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         aria-label="Main navigation"
       >
         <div className="flex items-center justify-around h-16 px-2">
-          {MOBILE_NAV.map(({ path, icon: Icon, labelKey }) => (
+          {MOBILE_NAV.map(({ path, icon: Icon, labelKey, defaultLabel }) => (
             <NavLink
               key={path}
               to={path}
@@ -315,7 +322,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isActive ? 'bg-primary/10' : ''}`}>
                     <Icon className="w-[18px] h-[18px]" />
                   </div>
-                  <span className="text-[10px] font-medium leading-none">{t(labelKey)}</span>
+                  <span className="text-[10px] font-medium leading-none">{t(labelKey, defaultLabel)}</span>
                 </>
               )}
             </NavLink>
@@ -347,7 +354,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <div key={gi}>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1.5">{t(group.label)}</p>
                   <div className="space-y-0.5">
-                    {group.items.map(({ path, icon: Icon, labelKey }) => (
+                    {group.items.map(({ path, icon: Icon, labelKey, defaultLabel }) => (
                       <NavLink
                         key={path}
                         to={path}
@@ -359,7 +366,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         }
                       >
                         <Icon className="w-4 h-4" />
-                        <span>{t(labelKey)}</span>
+                        <span>{t(labelKey, defaultLabel)}</span>
                       </NavLink>
                     ))}
                   </div>

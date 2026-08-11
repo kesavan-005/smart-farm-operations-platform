@@ -22,6 +22,8 @@ const DashboardPage = lazy(() => import('@/features/dashboard/components/Dashboa
 const FarmListPage = lazy(() => import('@/features/farms').then(m => ({ default: m.FarmListScreen })));
 const FarmDetailPage = lazy(() => import('@/features/farms').then(m => ({ default: m.FarmDetailScreen })));
 const FarmMapPage = lazy(() => import('./ComingSoonPage'));
+const FarmHealthPage = lazy(() => import('@/features/farms').then(m => ({ default: m.FarmHealthScreen })));
+const FarmerOnboardingWizard = lazy(() => import('@/features/farms/components/onboarding').then(m => ({ default: m.FarmerOnboardingWizard })));
 const FieldDetailPage = lazy(() => import('@/features/fields').then(m => ({ default: m.FieldDetailScreen })));
 const CropDetailPage = lazy(() => import('@/features/crops').then(m => ({ default: m.CropDetailScreen })));
 const ActivityTimelinePage = lazy(() => import('./ComingSoonPage'));
@@ -110,6 +112,10 @@ export const router = createBrowserRouter([
         path: '/dashboard',
         element: <SuspenseWrapper><DashboardPage /></SuspenseWrapper>,
       },
+      {
+        path: '/onboarding',
+        element: <SuspenseWrapper><FarmerOnboardingWizard /></SuspenseWrapper>,
+      },
 
       // Farm hierarchy
       {
@@ -123,6 +129,10 @@ export const router = createBrowserRouter([
       {
         path: '/farms/:farmId/map',
         element: <SuspenseWrapper><FarmMapPage /></SuspenseWrapper>,
+      },
+      {
+        path: '/farms/:farmId/health',
+        element: <SuspenseWrapper><FarmHealthPage /></SuspenseWrapper>,
       },
       {
         path: '/farms/:farmId/fields/:fieldId',

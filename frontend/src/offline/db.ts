@@ -8,6 +8,7 @@ import type { Farm, Field, Crop, InventoryItem, Expense, Income, Harvest, Wareho
 
 import type { FarmActivity } from '@/types/activity';
 import type { FarmTask } from '@/types/task';
+import type { OnboardingDraft } from '@/features/farms/components/onboarding/types/OnboardingTypes';
 
 export class SmartFarmDB extends Dexie {
   // Entity tables (local cache of server data)
@@ -29,6 +30,9 @@ export class SmartFarmDB extends Dexie {
 
   // Sync queue
   syncQueue!: EntityTable<SyncQueueEntry, 'id'>;
+
+  // Onboarding drafts (for partial sync tracking)
+  onboardingDrafts!: EntityTable<OnboardingDraft, 'id'>;
 
   constructor() {
     super('SmartFarmDB');
@@ -53,6 +57,9 @@ export class SmartFarmDB extends Dexie {
 
       // Sync queue — auto-increment id, indexed for ordered processing
       syncQueue: '++id, entityType, status, createdAt',
+
+      // Onboarding Drafts
+      onboardingDrafts: 'id, userId, updatedAt',
     });
   }
 }

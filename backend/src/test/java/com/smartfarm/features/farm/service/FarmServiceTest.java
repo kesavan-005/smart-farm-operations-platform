@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.smartfarm.common.exception.ResourceNotFoundException;
+
 import com.smartfarm.features.auth.domain.User;
 import com.smartfarm.features.auth.repository.UserRepository;
 import com.smartfarm.features.farm.domain.Farm;

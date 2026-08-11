@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon as LeafletPolygon, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Edit3, Trash2, CheckCircle2, RotateCcw, AlertTriangle, CloudDownload } from 'lucide-react';
+import { Navigation, Edit3, Trash2, CheckCircle2, RotateCcw, AlertTriangle, CloudDownload } from 'lucide-react';
 import { getCurrentLocation, calculateFarmArea, validateFarmBoundary, calculateCentroid } from '@/utils/geofenceUtils';
 import { downloadFarmMapTiles } from '@/utils/mapOfflineUtils';
 
@@ -89,7 +89,7 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
   const [points, setPoints] = useState<[number, number][]>(() => {
     if (boundary && boundary.coordinates && boundary.coordinates[0]) {
       // GeoJSON is [lng, lat], convert to Leaflet [lat, lng]
-      return boundary.coordinates[0].slice(0, -1).map((pt) => [pt[1], pt[0]]);
+      return boundary.coordinates[0].slice(0, -1).map((pt) => [pt[1]!, pt[0]!] as [number, number]);
     }
     return [];
   });
@@ -113,7 +113,7 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
   // Sync internal points when boundary prop updates externally
   useEffect(() => {
     if (boundary && boundary.coordinates && boundary.coordinates[0]) {
-      const leafletPts: [number, number][] = boundary.coordinates[0].slice(0, -1).map((pt) => [pt[1], pt[0]]);
+      const leafletPts: [number, number][] = boundary.coordinates[0].slice(0, -1).map((pt) => [pt[1]!, pt[0]!] as [number, number]);
       setPoints(leafletPts);
       const centroid = calculateCentroid(boundary);
       if (centroid) {
@@ -137,7 +137,8 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
     // Convert Leaflet [lat, lng] -> GeoJSON [lng, lat]
     const geoJsonRing: [number, number][] = newPoints.map((pt) => [pt[1], pt[0]]);
     // Close polygon
-    geoJsonRing.push([newPoints[0][1], newPoints[0][0]]);
+    const firstPt = newPoints[0]!;
+    geoJsonRing.push([firstPt[1], firstPt[0]]);
 
     const geoJsonPolygon: GeoJSON.Polygon = {
       type: 'Polygon',
@@ -214,7 +215,7 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
     points.length >= 3
       ? {
           type: 'Polygon',
-          coordinates: [[...points.map((pt) => [pt[1], pt[0]]), [points[0][1], points[0][0]]]],
+          coordinates: [[...points.map((pt) => [pt[1], pt[0]]), [points[0]![1], points[0]![0]]]],
         }
       : null;
 

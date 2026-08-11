@@ -1,7 +1,6 @@
 package com.smartfarm.features.auth.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.smartfarm.features.auth.domain.OtpToken;

@@ -20,7 +20,7 @@ import com.smartfarm.features.finance.repository.JournalEntryRepository;
 import com.smartfarm.features.finance.repository.FinancialAuditLogRepository;
 import com.smartfarm.features.inventory.domain.InventoryItem;
 import com.smartfarm.features.inventory.repository.InventoryItemRepository;
-import com.smartfarm.features.inventory.domain.InventoryItem;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;

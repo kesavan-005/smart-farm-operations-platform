@@ -50,17 +50,27 @@ export function useOfflineQuery<TData extends { id: string }>(
             endpoint,
             { params },
           );
-          const data = response.data.data;
-          const items = Array.isArray(data) ? data : [data];
+          const rawData = response.data.data;
+          let items: TData[] = [];
+
+          if (Array.isArray(rawData)) {
+            items = rawData;
+          } else if (rawData && typeof rawData === 'object' && 'content' in rawData && Array.isArray((rawData as any).content)) {
+            items = (rawData as any).content;
+          } else if (rawData) {
+            items = [rawData as TData];
+          }
 
           // Update IndexedDB cache
           const table = db.table(tableName);
-          await table.bulkPut(items.map((item) => ({ ...item, _synced: true })));
+          if (items.length > 0) {
+            await table.bulkPut(items.map((item) => ({ ...item, _synced: true })));
+          }
 
           return items;
         }
-      } catch {
-        // Network error — fall through to IndexedDB
+      } catch (err) {
+        console.warn(`useOfflineQuery network error for ${endpoint}, falling back to IndexedDB`, err);
       }
 
       // Offline or error: read from IndexedDB
@@ -101,9 +111,11 @@ export function useOfflineQueryById<TData extends { id: string }>(options: {
           const response = await apiClient.get<ApiResponse<TData>>(endpoint);
           const data = response.data.data;
 
-          // Update IndexedDB cache
-          const table = db.table(tableName);
-          await table.put({ ...data, _synced: true });
+          if (data && data.id) {
+            // Update IndexedDB cache
+            const table = db.table(tableName);
+            await table.put({ ...data, _synced: true });
+          }
 
           return data;
         }
@@ -119,6 +131,5 @@ export function useOfflineQueryById<TData extends { id: string }>(options: {
 
     staleTime: staleTime ?? 5 * 60 * 1000,
     gcTime: Infinity,
-
   });
 }

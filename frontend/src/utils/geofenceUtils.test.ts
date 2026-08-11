@@ -32,8 +32,8 @@ describe('geofenceUtils', () => {
     const poly = convertCoordinatesToGeoJSON(sampleCoords);
     expect(poly).not.toBeNull();
     expect(poly?.type).toBe('Polygon');
-    expect(poly?.coordinates[0].length).toBe(5);
-    expect(poly?.coordinates[0][0]).toEqual(poly?.coordinates[0][4]);
+    expect(poly?.coordinates[0]!.length).toBe(5);
+    expect(poly?.coordinates[0]![0]).toEqual(poly?.coordinates[0]![4]);
   });
 
   it('validates a correct farm boundary polygon', () => {

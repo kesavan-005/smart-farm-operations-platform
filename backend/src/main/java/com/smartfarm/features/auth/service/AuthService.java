@@ -125,7 +125,7 @@ public class AuthService {
 
         try {
             // 1. Spring Security Authentication via AuthenticationManager
-            Authentication authentication = authenticationManager.authenticate(
+            authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(identifier, request.getPassword())
             );
 

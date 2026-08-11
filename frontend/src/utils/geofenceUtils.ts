@@ -104,18 +104,19 @@ export function validateFarmBoundary(boundary: GeoJSON.Polygon | null | undefine
 
   // Verify lat/lng ranges
   for (const pt of ring) {
-    if (!Array.isArray(pt) || pt.length < 2 || isNaN(pt[0]) || isNaN(pt[1])) {
+    if (!Array.isArray(pt) || pt.length < 2 || pt[0] === undefined || pt[1] === undefined || isNaN(pt[0]) || isNaN(pt[1])) {
       return { valid: false, message: 'Boundary contains invalid coordinate points.' };
     }
-    const [lng, lat] = pt;
+    const lng = pt[0];
+    const lat = pt[1];
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return { valid: false, message: 'Coordinate points are outside valid geographic latitude/longitude range.' };
     }
   }
 
   // Ensure ring is closed
-  const first = ring[0];
-  const last = ring[ring.length - 1];
+  const first = ring[0]!;
+  const last = ring[ring.length - 1]!;
   if (first[0] !== last[0] || first[1] !== last[1]) {
     return { valid: false, message: 'Farm boundary polygon must be a closed loop.' };
   }
@@ -155,11 +156,11 @@ export function convertCoordinatesToGeoJSON(coords: [number, number][]): GeoJSON
   }
 
   const ring: [number, number][] = coords.map((c) => [c[0], c[1]]);
-  const first = ring[0];
-  const last = ring[ring.length - 1];
+  const first = ring[0]!;
+  const last = ring[ring.length - 1]!;
 
   if (first[0] !== last[0] || first[1] !== last[1]) {
-    ring.push([first[0], first[1]]);
+    ring.push([first[0]!, first[1]!]);
   }
 
   return {
@@ -178,8 +179,9 @@ export function calculateCentroid(boundary: GeoJSON.Polygon | null | undefined):
 
   try {
     const centroidFeature = turf.centroid(boundary);
-    const [lng, lat] = centroidFeature.geometry.coordinates;
-    return { latitude: lat, longitude: lng };
+    const lng = centroidFeature.geometry.coordinates[0];
+    const lat = centroidFeature.geometry.coordinates[1];
+    return { latitude: lat!, longitude: lng! };
   } catch (err) {
     console.error('Error computing boundary centroid:', err);
     return null;

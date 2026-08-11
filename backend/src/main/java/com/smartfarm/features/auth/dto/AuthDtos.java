@@ -79,6 +79,7 @@ public class AuthDtos {
 
         private String farmName;
 
+        @Builder.Default
         private String language = "en";
 
         @AssertTrue(message = "You must accept the terms and conditions")

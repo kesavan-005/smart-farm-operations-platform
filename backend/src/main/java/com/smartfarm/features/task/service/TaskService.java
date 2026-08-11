@@ -53,7 +53,7 @@ public class TaskService {
     private final TaskChecklistRepository taskChecklistRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
-    private final TaskAssignmentRepository taskAssignmentRepository;
+
 
     @Transactional
     public TaskResponse createTask(TaskRequest request, UUID userId) {

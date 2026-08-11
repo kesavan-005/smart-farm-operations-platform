@@ -1,7 +1,9 @@
 import { useOfflineQuery, useOfflineQueryById } from '@/offline/useOfflineQuery';
 import { useOfflineMutation } from '@/offline/useOfflineMutation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/apiClient';
 import type { Farm } from '@/types/domain';
+import type { FarmContextResponse } from './types';
 
 export function useFarms(search?: string, status?: string) {
   return useOfflineQuery<Farm>({
@@ -81,6 +83,18 @@ export function useDeleteFarm() {
         queryClient.invalidateQueries({ queryKey: ['farms'], exact: false });
       }
     }
+  });
+}
+
+export function useFarmContext(farmId: string) {
+  return useQuery({
+    queryKey: ['farms', farmId, 'context'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: FarmContextResponse }>(`/farms/${farmId}/context`);
+      return response.data.data;
+    },
+    enabled: !!farmId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
