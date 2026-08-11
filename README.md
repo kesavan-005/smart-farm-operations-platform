@@ -1,68 +1,81 @@
 # Smart Farm Operations & Automation Platform
 
-A bilingual (Tamil/English), offline-first, role-based farm management Progressive Web Application (PWA) for Tamil Nadu.
+A bilingual (Tamil/English), offline-first, role-based farm management Progressive Web Application (PWA) tailored for farm operations in Tamil Nadu.
 
-## Architecture
+---
 
-**Modular monolith** — React 19 PWA frontend + Spring Boot 3 REST API backend, organized as a monorepo.
+## 🚀 Key Features
+
+- 🌾 **Farm & Field Management**: Geofenced farm boundary drawing via interactive maps (Leaflet/OpenStreetMap), automated area and coordinate calculation, location details, and soil profile tracking.
+- 🌱 **Crop Management**: Crop variety tracking, seasonal crop cycle planning, and growth stage management.
+- 📋 **Task & Activity Management**: Task allocation, status tracking (Todo, In Progress, On Hold, Completed, Cancelled), priority levels, and worker assignment.
+- 📦 **Inventory Management**: Real-time stock levels, category categorization, unit tracking, and low-stock alerts.
+- 💰 **Financial Management**: Expense and income recording, budget tracking, transaction categorization, and journal ledger reports.
+- 🌐 **Bilingual Support (i18n)**: Instant language switching between English and Tamil (தமிழ்).
+- 📶 **Offline-First PWA**: Built-in IndexedDB caching (via Dexie.js), background sync queue, and PWA offline capabilities.
+- 🔐 **Role-Based Security**: JWT-based authentication supporting Admin, Farm Owner, Farm Manager, and Worker roles.
+
+---
+
+## 🏗️ Project Architecture
+
+Organized as a modular monorepo:
 
 ```
-smart-farm-platform/
+smart-farm-operations-platform/
 ├── frontend/          # React 19 + Vite + TypeScript + Tailwind CSS
-├── backend/           # Spring Boot 3 + Java 17 + PostgreSQL + Flyway
-├── infrastructure/    # Future IaC (Terraform/CDK)
-└── docs/              # Architecture docs, API contracts, ADRs
+├── backend/           # Spring Boot 3 + Java 17 + PostgreSQL + Hibernate
+├── infrastructure/    # Infrastructure configuration & docs
+└── docs/              # Architecture docs, contracts, and guidelines
 ```
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui |
-| State | TanStack Query (server), Zustand (client), React Hook Form (forms) |
-| Offline | Dexie.js (IndexedDB), Service Worker (Workbox), Background Sync |
-| Backend | Spring Boot 3, Java 17, Spring Security, MapStruct |
-| Database | PostgreSQL 16 + PostGIS, Flyway migrations |
-| Cache | Redis 7 |
-| Storage | AWS S3 (media), MinIO (local dev) |
-| Auth | JWT (access + refresh tokens), Phone OTP |
-| i18n | i18next (English + Tamil) |
-| Maps | Leaflet + OpenStreetMap |
+## 🛠️ Tech Stack
 
-## Prerequisites
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| **State & Data** | TanStack Query (Server State), Zustand (Client State), React Hook Form & Zod |
+| **Offline Storage** | Dexie.js (IndexedDB), Workbox Service Worker |
+| **Backend** | Spring Boot 3, Java 17, Spring Security, MapStruct, Lombok |
+| **Database** | PostgreSQL 16 + PostGIS / H2 (Dev profile), Flyway migrations |
+| **Cache & Media** | Redis 7, MinIO / S3 Storage |
+| **Localization** | i18next (English & Tamil) |
+| **Mapping** | Leaflet + OpenStreetMap + Turf.js |
+
+---
+
+## 📋 Prerequisites
 
 - **Node.js** 18+ and **npm** 9+
 - **JDK** 17+
 - **Maven** 3.9+
-- **Docker Desktop** (for PostgreSQL, Redis, MinIO)
+- **Docker Desktop** (optional, for PostgreSQL, Redis, MinIO)
 
-## Local Development Setup
+---
 
-### 1. Start Infrastructure
+## 🚀 Getting Started
+
+### 1. Start Infrastructure (Optional for local H2 dev mode)
 
 ```bash
 docker-compose up -d
 ```
 
-This starts:
-- PostgreSQL 16 with PostGIS on port `5432`
-- Redis 7 on port `6379`
-- MinIO (S3-compatible) on port `9000` (console: `9001`)
-
-### 2. Start Backend
+### 2. Start Backend API
 
 ```bash
 cd backend
+# Using included Maven wrapper or installed mvn
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-- Flyway runs migrations automatically
-- Seed data loads in `dev` profile
-- API available at `http://localhost:8080`
-- Swagger UI at `http://localhost:8080/swagger-ui.html`
-- Health check at `http://localhost:8080/actuator/health`
+- **API Base URL**: `http://localhost:8080`
+- **Swagger Documentation**: `http://localhost:8080/swagger-ui.html`
+- **Health Check**: `http://localhost:8080/actuator/health`
 
-### 3. Start Frontend
+### 3. Start Frontend Web Application
 
 ```bash
 cd frontend
@@ -70,39 +83,33 @@ npm install
 npm run dev
 ```
 
-- App available at `http://localhost:5173`
-- API calls proxied to `http://localhost:8080`
+- **Web Application**: `http://localhost:5173`
 
-## Key Commands
+---
+
+## 🧪 Available Scripts & Commands
 
 ### Frontend
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Production build
-npm run preview      # Preview production build
-npm run lint         # ESLint check
-npm run type-check   # TypeScript strict check
-npm run test         # Run Vitest unit tests
-npm run test:e2e     # Run Playwright E2E tests
+npm run dev          # Start Vite development server
+npm run build        # Build production PWA assets
+npm run preview      # Preview production build locally
+npm run type-check   # Run TypeScript strict type verification
+npm run lint         # Run ESLint check
 ```
 
 ### Backend
 
 ```bash
-mvn spring-boot:run                    # Start with default profile
-mvn spring-boot:run -Dspring-boot.run.profiles=dev   # Start with dev profile
-mvn test                               # Run all tests
-mvn verify                             # Full verification
-mvn spotless:apply                     # Format code
+mvn clean compile                      # Clean and compile Java classes
+mvn spring-boot:run                    # Run application with default profile
+mvn spring-boot:run -Dspring-boot.run.profiles=dev # Run with development profile
+mvn test                               # Execute backend unit tests
 ```
 
-## Project Conventions
+---
 
-- See [CONTRIBUTING.md](./CONTRIBUTING.md) for coding standards
-- See [docs/adr/](./docs/adr/) for architecture decisions
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
-
-## License
+## 📄 License
 
 Private — All rights reserved.
