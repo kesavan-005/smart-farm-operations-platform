@@ -20,6 +20,10 @@ test-results/
 
 # ---------- Java / Backend ----------
 target/
+data/
+*.db
+*.mv.db
+*.trace.db
 *.class
 *.jar
 *.war
