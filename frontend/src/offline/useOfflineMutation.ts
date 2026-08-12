@@ -6,7 +6,7 @@ import { useMutation, useQueryClient, type MutationOptions } from '@tanstack/rea
 import { db } from './db';
 import { syncQueue } from './syncQueue';
 import { flushSyncQueue } from './syncManager';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '../lib/apiClient';
 import type { ApiResponse } from '@/types/api';
 import { v4 as uuidv4 } from 'uuid';
 

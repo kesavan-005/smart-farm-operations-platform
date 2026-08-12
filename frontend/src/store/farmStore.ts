@@ -20,9 +20,12 @@ export const useFarmStore = create<FarmState>()(
       initializeActiveFarm: (farms?: Farm[], userFarmId?: string | null) => {
         const currentActive = get().activeFarmId;
 
-        // 1. If currently stored activeFarmId is valid in available farms list, keep it
-        if (currentActive && farms && farms.some((f) => f.id === currentActive)) {
-          return currentActive;
+        // 1. If currently stored activeFarmId is valid and synced in available farms list, keep it
+        if (currentActive && farms) {
+          const activeFarm = farms.find((f) => f.id === currentActive);
+          if (activeFarm && (activeFarm as any)._synced !== false) {
+            return currentActive;
+          }
         }
 
         // 2. Fallback to user.farmId if valid in farms list
@@ -31,11 +34,12 @@ export const useFarmStore = create<FarmState>()(
           return userFarmId;
         }
 
-        // 3. Fallback to first available farm
+        // 3. Fallback to first available synced farm, or first farm overall
         if (farms && farms.length > 0) {
-          const firstFarmId = farms[0]!.id;
-          set({ activeFarmId: firstFarmId });
-          return firstFarmId;
+          const syncedFarm = farms.find((f) => (f as any)._synced !== false);
+          const selectedId = syncedFarm ? syncedFarm.id : farms[0]!.id;
+          set({ activeFarmId: selectedId });
+          return selectedId;
         }
 
         return null;

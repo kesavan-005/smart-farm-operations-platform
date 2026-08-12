@@ -4,7 +4,7 @@
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { db } from './db';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '../lib/apiClient';
 import type { ApiResponse, PaginatedResponse, FilterParams } from '@/types/api';
 
 interface OfflineQueryOptions<TData> {
@@ -61,21 +61,45 @@ export function useOfflineQuery<TData extends { id: string }>(
             items = [rawData as TData];
           }
 
-          // Update IndexedDB cache
+          // Update IndexedDB cache & purge stale synced items no longer on server
           const table = db.table(tableName);
           if (items.length > 0) {
             await table.bulkPut(items.map((item) => ({ ...item, _synced: true })));
           }
 
-          // Merge unsynced local items pending sync
+          // Get all local data
           const localData = await table.toArray();
-          const unsyncedLocal = localData.filter(
-            (item) => item._synced === false && (!localFilter || localFilter(item as TData))
+          const serverIds = new Set(items.map((i) => i.id));
+
+          // Get pending sync entries from syncQueue to protect offline-created items
+          const pendingSyncEntries = await db.syncQueue.where('entityType').equals(tableName.replace(/s$/, '')).toArray();
+          const pendingIds = new Set(pendingSyncEntries.map((e: any) => e.payload?.id).filter(Boolean));
+
+          // Delete stale entries that no longer exist on server and are not pending sync
+          const staleEntries = localData.filter(
+            (item: any) => !serverIds.has(item.id) && !pendingIds.has(item.id)
           );
-          const existingIds = new Set(items.map((i) => i.id));
+          if (staleEntries.length > 0) {
+            await table.bulkDelete(staleEntries.map((e: any) => e.id));
+
+            if (tableName === 'farms') {
+              const currentActiveId = (await import('../store/farmStore')).useFarmStore.getState().activeFarmId;
+              if (currentActiveId && staleEntries.some((e: any) => e.id === currentActiveId)) {
+                const newActiveId = items.length > 0 && items[0] ? items[0].id : null;
+                if (newActiveId) {
+                  (await import('../store/farmStore')).useFarmStore.getState().setActiveFarmId(newActiveId);
+                }
+              }
+            }
+          }
+
+          // Merge unsynced local items pending sync
+          const unsyncedLocal = localData.filter(
+            (item) => (item._synced === false || pendingIds.has(item.id)) && (!localFilter || localFilter(item as TData))
+          );
           const merged = [...items];
           for (const u of unsyncedLocal) {
-            if (!existingIds.has(u.id)) {
+            if (!serverIds.has(u.id) && !merged.some((m) => m.id === u.id)) {
               merged.push(u as TData);
             }
           }

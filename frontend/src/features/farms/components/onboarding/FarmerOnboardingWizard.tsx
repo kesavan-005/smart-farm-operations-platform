@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWizardStore } from './store/useWizardStore';
+import { useFarmStore } from '@/store/farmStore';
+import { queryClient } from '@/lib/queryClient';
 import { db } from '@/offline/db';
 import { v4 as uuidv4 } from 'uuid';
 import { apiClient } from '@/lib/apiClient';
@@ -106,6 +108,7 @@ export function FarmerOnboardingWizard() {
           irrigationType: farm.irrigationSource,
         });
         serverFarmId = farmRes.data.data.id;
+        await db.farms.put({ ...farmRes.data.data, _synced: true });
         
         // Update draft with partial success
         if (draft) {
@@ -127,6 +130,7 @@ export function FarmerOnboardingWizard() {
             notes: `Address: ${field.address || ''}, Village: ${field.village}, Taluk: ${field.taluk}, District: ${field.district}, State: ${field.state}, Pincode: ${field.pincode}`
           });
           syncedFieldIds[field.id] = fieldRes.data.data.id;
+          await db.fields.put({ ...fieldRes.data.data, _synced: true });
           
           if (draft) {
             await db.onboardingDrafts.update(draft.id, { syncedFieldIds });
@@ -149,6 +153,7 @@ export function FarmerOnboardingWizard() {
               expectedHarvestDate: crop.expectedHarvestDate
             });
             syncedCropIds[crop.id] = cropRes.data.data.id;
+            await db.crops.put({ ...cropRes.data.data, _synced: true });
             
             if (draft) {
               await db.onboardingDrafts.update(draft.id, { syncedCropIds });
@@ -160,6 +165,8 @@ export function FarmerOnboardingWizard() {
       // Success!
       await db.onboardingDrafts.clear();
       setFinalFarmId(serverFarmId);
+      useFarmStore.getState().setActiveFarmId(serverFarmId);
+      queryClient.invalidateQueries({ queryKey: ['farms'], exact: false });
       setIsSuccess(true);
       
     } catch (err: any) {
@@ -268,6 +275,7 @@ export function FarmerOnboardingWizard() {
         <Button 
           size="lg" 
           onClick={() => {
+            useFarmStore.getState().setActiveFarmId(finalFarmId);
             reset();
             navigate(`/farms/${finalFarmId}/health`);
           }}

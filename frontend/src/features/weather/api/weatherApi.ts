@@ -102,8 +102,8 @@ export function useFarmWeather(farmId?: string | null) {
     enabled: !!farmId,
     staleTime: 1000 * 60 * 15, // 15 minutes client stale time
     retry: (failureCount, error: any) => {
-      // Don't retry if location is unavailable or offline without cache
-      if (error?.response?.data?.error?.code === 'WEATHER_LOCATION_UNAVAILABLE' || error?.message === 'WEATHER_OFFLINE_UNAVAILABLE') {
+      // Don't retry if farm is 404 Not Found, location is unavailable, or offline without cache
+      if (error?.response?.status === 404 || error?.code === 'RESOURCE_NOT_FOUND' || error?.response?.data?.error?.code === 'WEATHER_LOCATION_UNAVAILABLE' || error?.message === 'WEATHER_OFFLINE_UNAVAILABLE') {
         return false;
       }
       return failureCount < 2;

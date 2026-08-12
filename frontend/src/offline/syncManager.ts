@@ -4,8 +4,8 @@
 import { syncQueue, SyncQueue } from './syncQueue';
 import { db } from './db';
 import { useFarmStore } from '@/store/farmStore';
-import { apiClient } from '@/lib/apiClient';
-import { queryClient } from '@/lib/queryClient';
+import { apiClient } from '../lib/apiClient';
+import { queryClient } from '../lib/queryClient';
 import type { ApiResponse, SyncQueueEntry } from '@/types/api';
 import type { Farm, Field } from '@/types/domain';
 
@@ -36,16 +36,24 @@ export function registerSyncHandler(entityType: string, handler: SyncHandler): v
 async function defaultSyncHandler(entry: SyncQueueEntry): Promise<void> {
   const basePath = `/${entry.entityType}s`;
 
-  switch (entry.operation) {
-    case 'CREATE':
-      await apiClient.post(basePath, entry.payload);
-      break;
-    case 'UPDATE':
-      await apiClient.put(`${basePath}/${entry.entityId}`, entry.payload);
-      break;
-    case 'DELETE':
-      await apiClient.delete(`${basePath}/${entry.entityId}`);
-      break;
+  try {
+    switch (entry.operation) {
+      case 'CREATE':
+        await apiClient.post(basePath, entry.payload);
+        break;
+      case 'UPDATE':
+        await apiClient.put(`${basePath}/${entry.entityId}`, entry.payload);
+        break;
+      case 'DELETE':
+        await apiClient.delete(`${basePath}/${entry.entityId}`);
+        break;
+    }
+  } catch (err: any) {
+    if ((entry.operation === 'DELETE' || entry.operation === 'UPDATE') && (err?.code === 'RESOURCE_NOT_FOUND' || err?.response?.status === 404)) {
+      console.info(`${entry.entityType} ${entry.entityId} was not found on server during ${entry.operation}. Marking satisfied.`);
+    } else {
+      throw err;
+    }
   }
 }
 
@@ -295,10 +303,23 @@ registerSyncHandler('farm', async (entry) => {
       await db.table('farms').put({ ...serverFarm, _synced: true });
       if (oldId !== newId) {
         await db.table('farms').delete(oldId);
+        
+        // Update local fields in Dexie
         const localFields = await db.table('fields').filter((f: any) => f.farmId === oldId).toArray();
         for (const f of localFields) {
           await db.table('fields').update(f.id, { farmId: newId });
         }
+
+        // Update pending syncQueue entries referencing oldId
+        const pendingQueueEntries = await db.table('syncQueue').toArray();
+        for (const qe of pendingQueueEntries) {
+          if (qe.payload && typeof qe.payload === 'object' && (qe.payload as any).farmId === oldId) {
+            await db.table('syncQueue').update(qe.id, {
+              payload: { ...(qe.payload as any), farmId: newId }
+            });
+          }
+        }
+
         const farmStore = useFarmStore.getState();
         if (farmStore.activeFarmId === oldId) {
           farmStore.setActiveFarmId(newId);
@@ -309,7 +330,15 @@ registerSyncHandler('farm', async (entry) => {
   } else if (entry.operation === 'UPDATE') {
     await apiClient.put(`/farms/${entry.entityId}`, entry.payload);
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farms/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farms/${entry.entityId}`);
+    } catch (err: any) {
+      if (err?.code === 'RESOURCE_NOT_FOUND' || err?.response?.status === 404) {
+        console.info(`Farm ${entry.entityId} already deleted or not found on server.`);
+      } else {
+        throw err;
+      }
+    }
   }
 });
 
