@@ -21,6 +21,7 @@ test-results/
 # ---------- Java / Backend ----------
 target/
 data/
+apache-maven-*/
 *.db
 *.mv.db
 *.trace.db
