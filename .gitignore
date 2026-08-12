@@ -1,0 +1,66 @@
+# ==========================================
+# Smart Farm Platform — Monorepo .gitignore
+# ==========================================
+
+# ---------- Environment & Secrets ----------
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ---------- Node.js / Frontend ----------
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+.eslintcache
+coverage/
+playwright-report/
+test-results/
+
+# ---------- Java / Backend ----------
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ---------- Docker ----------
+docker-compose.override.yml
+
+# ---------- MinIO data ----------
+minio-data/
+
+# ---------- PostgreSQL data ----------
+pgdata/
+
+# ---------- Redis data ----------
+redis-data/
+
+# ---------- Misc ----------
+*.bak
+*.tmp
+*.temp

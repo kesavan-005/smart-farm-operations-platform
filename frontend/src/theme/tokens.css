@@ -1,0 +1,265 @@
+/* ============================================================
+   Smart Farm Platform — Design Tokens
+   Premium Agricultural Design System
+   CSS Custom Properties at :root, referenced by Tailwind config.
+   ============================================================ */
+
+:root {
+  /* ---------- Colors — Primary (Deep Emerald — sophisticated agricultural) ---------- */
+  --color-primary-50: 236 253 245;
+  --color-primary-100: 209 250 229;
+  --color-primary-200: 167 243 208;
+  --color-primary-300: 110 231 183;
+  --color-primary-400: 52 211 153;
+  --color-primary-500: 16 185 129;
+  --color-primary-600: 5 150 105;
+  --color-primary-700: 4 120 87;
+  --color-primary-800: 6 95 70;
+  --color-primary-900: 4 78 56;
+  --color-primary-950: 2 44 34;
+
+  /* ---------- Colors — Secondary (Warm Amber — harvest warmth) ---------- */
+  --color-secondary-50: 255 251 235;
+  --color-secondary-100: 254 243 199;
+  --color-secondary-200: 253 230 138;
+  --color-secondary-300: 252 211 77;
+  --color-secondary-400: 251 191 36;
+  --color-secondary-500: 245 158 11;
+  --color-secondary-600: 217 119 6;
+  --color-secondary-700: 180 83 9;
+  --color-secondary-800: 146 64 14;
+  --color-secondary-900: 120 53 15;
+
+  /* ---------- Colors — Accent (Sky Blue — water/irrigation) ---------- */
+  --color-accent-50: 240 249 255;
+  --color-accent-100: 224 242 254;
+  --color-accent-200: 186 230 253;
+  --color-accent-300: 125 211 252;
+  --color-accent-400: 56 189 248;
+  --color-accent-500: 14 165 233;
+  --color-accent-600: 2 132 199;
+  --color-accent-700: 3 105 161;
+  --color-accent-800: 7 89 133;
+  --color-accent-900: 12 74 110;
+
+  /* ---------- Colors — Neutral (Warm-tinted grays) ---------- */
+  --color-neutral-50: 250 250 249;
+  --color-neutral-100: 245 245 244;
+  --color-neutral-200: 231 229 228;
+  --color-neutral-300: 214 211 209;
+  --color-neutral-400: 168 162 158;
+  --color-neutral-500: 120 113 108;
+  --color-neutral-600: 87 83 78;
+  --color-neutral-700: 68 64 60;
+  --color-neutral-800: 41 37 36;
+  --color-neutral-900: 28 25 23;
+  --color-neutral-950: 12 10 9;
+
+  /* ---------- Colors — Semantic ---------- */
+  --color-success: 22 163 74;
+  --color-success-light: 220 252 231;
+  --color-warning: 234 179 8;
+  --color-warning-light: 254 249 195;
+  --color-error: 220 38 38;
+  --color-error-light: 254 226 226;
+  --color-info: 37 99 235;
+  --color-info-light: 219 234 254;
+
+  /* ---------- Colors — Surface (light theme) ---------- */
+  --color-background: 252 252 251;
+  --color-surface: 255 255 255;
+  --color-surface-elevated: 255 255 255;
+  --color-surface-sunken: 245 245 244;
+  --color-text-primary: 28 25 23;
+  --color-text-secondary: 120 113 108;
+  --color-text-tertiary: 168 162 158;
+  --color-text-disabled: 214 211 209;
+  --color-border: 231 229 228;
+  --color-border-subtle: 245 245 244;
+  --color-border-focus: 5 150 105;
+
+  /* ---------- Typography ---------- */
+  --font-sans: 'Geist Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.8125rem;   /* 13px */
+  --text-base: 0.875rem;  /* 14px — slightly smaller base for density */
+  --text-lg: 1rem;        /* 16px */
+  --text-xl: 1.125rem;    /* 18px */
+  --text-2xl: 1.25rem;    /* 20px */
+  --text-3xl: 1.5rem;     /* 24px */
+  --text-4xl: 1.875rem;   /* 30px */
+  --text-5xl: 2.25rem;    /* 36px */
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* ---------- Spacing Scale ---------- */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-2-5: 0.625rem;
+  --space-3: 0.75rem;
+  --space-3-5: 0.875rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* ---------- Border Radius ---------- */
+  --radius-none: 0;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ---------- Shadows (refined, softer) ---------- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.07), 0 8px 10px -6px rgb(0 0 0 / 0.03);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+  --shadow-card: 0 0 0 1px rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  --shadow-card-hover: 0 0 0 1px rgb(0 0 0 / 0.04), 0 4px 12px 0 rgb(0 0 0 / 0.06);
+
+  /* ---------- Transitions ---------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-fast: 120ms var(--ease-out);
+  --transition-base: 200ms var(--ease-out);
+  --transition-slow: 300ms var(--ease-out);
+  --transition-slower: 500ms var(--ease-out);
+
+  /* ---------- Touch Targets (WCAG 2.5.8 AAA: 48dp minimum) ---------- */
+  --touch-target-min: 44px;
+
+  /* ---------- Z-Index Scale ---------- */
+  --z-base: 0;
+  --z-dropdown: 50;
+  --z-sticky: 100;
+  --z-fixed: 200;
+  --z-modal-backdrop: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+
+  /* ---------- Layout ---------- */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --header-height: 56px;
+  --content-max-width: 1280px;
+}
+
+/* ============================================================
+   Dark Theme
+   ============================================================ */
+.dark {
+  --color-background: 15 15 15;
+  --color-surface: 23 23 23;
+  --color-surface-elevated: 30 30 30;
+  --color-surface-sunken: 10 10 10;
+  --color-text-primary: 250 250 249;
+  --color-text-secondary: 168 162 158;
+  --color-text-tertiary: 120 113 108;
+  --color-text-disabled: 87 83 78;
+  --color-border: 41 37 36;
+  --color-border-subtle: 30 30 30;
+  --color-border-focus: 52 211 153;
+
+  --color-primary-50: 2 44 34;
+  --color-primary-100: 4 78 56;
+  --color-primary-200: 6 95 70;
+  --color-primary-300: 4 120 87;
+  --color-primary-400: 16 185 129;
+  --color-primary-500: 52 211 153;
+  --color-primary-600: 110 231 183;
+
+  --color-success-light: 4 78 56;
+  --color-warning-light: 120 53 15;
+  --color-error-light: 127 29 29;
+  --color-info-light: 30 58 138;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 4px 12px 0 rgb(0 0 0 / 0.3);
+}
+
+/* ============================================================
+   High Contrast Theme (Outdoor / Accessibility)
+   WCAG AAA — 7:1 contrast ratio target
+   ============================================================ */
+[data-theme='high-contrast'] {
+  --color-background: 0 0 0;
+  --color-surface: 15 15 15;
+  --color-surface-elevated: 25 25 25;
+  --color-text-primary: 255 255 255;
+  --color-text-secondary: 200 200 200;
+  --color-text-disabled: 140 140 140;
+  --color-border: 80 80 80;
+  --color-border-focus: 52 211 153;
+
+  --color-primary-500: 52 211 153;
+  --color-primary-600: 110 231 183;
+  --color-secondary-500: 251 191 36;
+  --color-error: 248 113 113;
+  --color-warning: 253 224 71;
+  --color-success: 74 222 128;
+  --color-info: 96 165 250;
+
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-card: 0 0 0 2px rgb(255 255 255 / 0.3);
+  --shadow-card-hover: 0 0 0 2px rgb(255 255 255 / 0.5);
+}
+
+/* ============================================================
+   Reduced Motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-base: 0ms;
+    --transition-slow: 0ms;
+    --transition-slower: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
