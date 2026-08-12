@@ -339,13 +339,18 @@ public class FinanceService {
     // Audit & Dashboard Stats
     // ==========================================
 
+    private String truncateVal(String val) {
+        if (val == null) return null;
+        return val.length() > 250 ? val.substring(0, 247) + "..." : val;
+    }
+
     private void logAudit(UUID txnId, User user, String op, String oldVal, String newVal, String ip) {
         FinancialAuditLog audit = FinancialAuditLog.builder()
                 .financialTransactionId(txnId)
                 .user(user)
                 .operation(op)
-                .oldValue(oldVal)
-                .newValue(newVal)
+                .oldValue(truncateVal(oldVal))
+                .newValue(truncateVal(newVal))
                 .ipAddress(ip)
                 .build();
         auditLogRepository.save(audit);

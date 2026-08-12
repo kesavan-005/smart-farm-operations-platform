@@ -57,7 +57,12 @@ export default function FinanceForm({ onSubmit, onCancel }: FormProps) {
     },
   });
 
-  const transactionType = watch('transactionType') || 'EXPENSE';
+  const transactionType = (watch('transactionType') || 'EXPENSE') as keyof typeof CATEGORIES_BY_TYPE;
+
+  const handleFormSubmit = (data: FormValues) => {
+    const isoDate = data.transactionDate ? new Date(data.transactionDate).toISOString() : new Date().toISOString();
+    onSubmit({ ...data, transactionDate: isoDate });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -74,7 +79,7 @@ export default function FinanceForm({ onSubmit, onCancel }: FormProps) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-card border border-border rounded-xl p-6 space-y-4">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="bg-card border border-border rounded-xl p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Type */}
           <div>

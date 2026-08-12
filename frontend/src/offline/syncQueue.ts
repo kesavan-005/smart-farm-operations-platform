@@ -35,9 +35,26 @@ export class SyncQueue {
   }
 
   /**
+   * Reset entries stuck in SYNCING state (e.g. from page reload) back to PENDING.
+   */
+  async resetStuckSyncing(): Promise<void> {
+    const stuck = await db.syncQueue
+      .where('status')
+      .equals(SyncStatus.SYNCING)
+      .toArray();
+
+    for (const entry of stuck) {
+      if (entry.id) {
+        await db.syncQueue.update(entry.id, { status: SyncStatus.PENDING });
+      }
+    }
+  }
+
+  /**
    * Get all pending entries in creation order.
    */
   async getPending(): Promise<SyncQueueEntry[]> {
+    await this.resetStuckSyncing();
     return db.syncQueue
       .where('status')
       .anyOf([SyncStatus.PENDING, SyncStatus.FAILED])
@@ -46,13 +63,15 @@ export class SyncQueue {
   }
 
   /**
-   * Get count of pending (unsynced) entries.
+   * Get count of pending (unsynced) active entries.
    */
   async getPendingCount(): Promise<number> {
-    return db.syncQueue
+    const entries = await db.syncQueue
       .where('status')
-      .anyOf([SyncStatus.PENDING, SyncStatus.FAILED])
-      .count();
+      .anyOf([SyncStatus.PENDING, SyncStatus.SYNCING, SyncStatus.FAILED])
+      .toArray();
+
+    return entries.filter((entry) => entry.retryCount < MAX_RETRY_COUNT).length;
   }
 
   /**
@@ -63,13 +82,10 @@ export class SyncQueue {
   }
 
   /**
-   * Mark an entry as successfully synced.
+   * Mark an entry as successfully synced — and delete it immediately from the queue.
    */
   async markSynced(id: number): Promise<void> {
-    await db.syncQueue.update(id, {
-      status: SyncStatus.SYNCED,
-      syncedAt: new Date(),
-    });
+    await db.syncQueue.delete(id);
   }
 
   /**
@@ -79,11 +95,17 @@ export class SyncQueue {
     const entry = await db.syncQueue.get(id);
     if (!entry) return;
 
-    await db.syncQueue.update(id, {
-      status: SyncStatus.FAILED,
-      retryCount: entry.retryCount + 1,
-      lastError: error,
-    });
+    const newRetryCount = entry.retryCount + 1;
+    if (newRetryCount >= MAX_RETRY_COUNT) {
+      console.warn(`Sync entry ${id} for ${entry.entityType} exhausted retries (${newRetryCount}). Removing from queue.`);
+      await db.syncQueue.delete(id);
+    } else {
+      await db.syncQueue.update(id, {
+        status: SyncStatus.FAILED,
+        retryCount: newRetryCount,
+        lastError: error,
+      });
+    }
   }
 
   /**
@@ -91,6 +113,24 @@ export class SyncQueue {
    */
   async clearSynced(): Promise<void> {
     await db.syncQueue.where('status').equals(SyncStatus.SYNCED).delete();
+  }
+
+  /**
+   * Clean up any stale or orphaned entries in the sync queue.
+   */
+  async cleanup(): Promise<void> {
+    await this.clearSynced();
+    await this.resetStuckSyncing();
+    const exhausted = await db.syncQueue
+      .where('status')
+      .equals(SyncStatus.FAILED)
+      .and((entry) => entry.retryCount >= MAX_RETRY_COUNT)
+      .toArray();
+    for (const entry of exhausted) {
+      if (entry.id) {
+        await db.syncQueue.delete(entry.id);
+      }
+    }
   }
 
   /**

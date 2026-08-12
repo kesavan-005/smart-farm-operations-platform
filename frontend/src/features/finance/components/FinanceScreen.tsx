@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Wallet, BookOpen, Target, Plus, RefreshCw, Settings } from 'lucide-react';
 import { useFarms } from '@/features/farms/api/farmsApi';
+import { useFarmStore } from '@/store/farmStore';
 import {
   useFinancialTransactions,
   useCreateFinancialTransaction,
@@ -15,15 +16,15 @@ import FinanceLedgerTable from './FinanceLedgerTable';
 import FinanceJournalLedger from './FinanceJournalLedger';
 import FinanceBudgetTracker from './FinanceBudgetTracker';
 import FinanceForm from './FinanceForm';
-import { db } from '@/offline/db';
+import { syncQueue } from '@/offline/syncQueue';
 
 export default function FinanceScreen() {
   const { t } = useTranslation('finance');
 
-  // 1. Resolve active farm context
+  // 1. Resolve active farm context — use global activeFarmId, fallback to first farm
   const { data: farms = [], isLoading: loadingFarms } = useFarms();
-  const activeFarm = farms[0];
-  const farmId = activeFarm?.id || '';
+  const { activeFarmId } = useFarmStore();
+  const farmId = activeFarmId || farms[0]?.id || '';
 
   // 2. Tab Navigation
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'accounting'>('dashboard');
@@ -41,10 +42,10 @@ export default function FinanceScreen() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Poll Dexie syncQueue count to update sync UI in real time
+    // Poll syncQueue count to update sync UI in real time
     const interval = setInterval(async () => {
       try {
-        const count = await db.syncQueue.count();
+        const count = await syncQueue.getPendingCount();
         setPendingChanges(count);
         setLastRefreshed(new Date().toLocaleTimeString());
       } catch (err) {
@@ -150,17 +151,22 @@ export default function FinanceScreen() {
 
       {/* Online Status & Action Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between p-3.5 bg-muted/30 border border-border rounded-xl gap-3 text-xs">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`} />
           <span className="font-semibold text-foreground">
             {isOnline ? t('status.online') : t('status.offline')}
           </span>
           <span className="text-muted-foreground/60">|</span>
           <span className="text-muted-foreground">
-            {pendingChanges} {t('status.syncing')}
+            {pendingChanges > 0
+              ? `${pendingChanges} ${t('status.syncing')}`
+              : t('status.allSynced')}
           </span>
           <span className="text-muted-foreground/60">|</span>
           <span className="text-muted-foreground">{t('status.lastSync')}: {lastRefreshed}</span>
+          {!isOnline && (
+            <span className="text-amber-600 font-semibold ml-1">({t('empty.offlineNotice')})</span>
+          )}
         </div>
 
         {isSyncing && (

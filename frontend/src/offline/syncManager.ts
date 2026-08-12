@@ -1,13 +1,13 @@
 // Sync Manager — background process that drains the sync queue
 // Retries with exponential backoff, listens for online events
 
-import { syncQueue, SyncQueue } from './syncQueue';
+import { syncQueue } from './syncQueue';
 import { db } from './db';
 import { useFarmStore } from '@/store/farmStore';
 import { apiClient } from '../lib/apiClient';
 import { queryClient } from '../lib/queryClient';
 import type { ApiResponse, SyncQueueEntry } from '@/types/api';
-import type { Farm, Field } from '@/types/domain';
+import type { Farm, Field, InventoryItem } from '@/types/domain';
 
 // Entity type → API endpoint mapping
 // Populated as features are built; each feature registers its sync handler
@@ -85,6 +85,9 @@ export async function flushSyncQueue(): Promise<{ synced: number; failed: number
     return { synced: 0, failed: 0 };
   }
 
+  // Clean up any stale or stuck entries before processing
+  await syncQueue.cleanup();
+
   const pending = await syncQueue.getPending();
   let synced = 0;
   let failed = 0;
@@ -95,17 +98,16 @@ export async function flushSyncQueue(): Promise<{ synced: number; failed: number
       synced++;
     } catch {
       failed++;
-      // Calculate backoff delay before retrying next entry
-      const delay = SyncQueue.getRetryDelay(entry.retryCount);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      // Don't stop the queue on failure — try remaining entries
-      // (they may be for different entities with no ordering dependency)
+      // Don't block subsequent entries with multi-second backoff timeouts
+      // Small 50ms throttle keeps requests smooth without freezing the queue
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
 
-  // Clean up synced entries
+  // Clean up synced entries & refresh UI query caches
   if (synced > 0) {
     await syncQueue.clearSynced();
+    queryClient.invalidateQueries();
   }
 
   return { synced, failed };
@@ -126,12 +128,12 @@ export function startSyncManager(): void {
     flushSyncQueue();
   });
 
-  // Periodic flush every 30 seconds when online
+  // Periodic flush every 10 seconds when online
   syncInterval = setInterval(() => {
     if (navigator.onLine) {
       flushSyncQueue();
     }
-  }, 30_000);
+  }, 10_000);
 
   // Initial flush on startup
   if (navigator.onLine) {
@@ -153,16 +155,58 @@ export function stopSyncManager(): void {
 // Inventory Custom Sync Handlers
 // ==========================================
 
+/**
+ * Helper: returns true if the error is a 404 / RESOURCE_NOT_FOUND.
+ * Used by sync handlers to silently mark DELETE/UPDATE of already-gone resources as satisfied.
+ */
+function isNotFoundError(err: any): boolean {
+  return err?.code === 'RESOURCE_NOT_FOUND' || err?.response?.status === 404;
+}
+
 registerSyncHandler('inventoryItem', async (entry) => {
   const farmId = (entry.payload as any).farmId;
   if (!farmId) throw new Error('farmId missing from payload');
   
+  const cleanPayload = { ...(entry.payload as any) };
+  if (cleanPayload.categoryId === '') delete cleanPayload.categoryId;
+  if (cleanPayload.warehouseId === '') delete cleanPayload.warehouseId;
+  if (cleanPayload.expiryDate === '') delete cleanPayload.expiryDate;
+  if (cleanPayload.maximumStock === '' || cleanPayload.maximumStock === null) delete cleanPayload.maximumStock;
+  if (cleanPayload.sellingPrice === '' || cleanPayload.sellingPrice === null) delete cleanPayload.sellingPrice;
+
   if (entry.operation === 'CREATE') {
-    await apiClient.post(`/farms/${farmId}/inventory/items`, entry.payload);
+    try {
+      const response = await apiClient.post<ApiResponse<InventoryItem>>(`/farms/${farmId}/inventory/items`, cleanPayload);
+      const serverItem = response.data?.data;
+      if (serverItem && serverItem.id) {
+        const oldId = entry.entityId;
+        const newId = serverItem.id;
+        await db.table('inventoryItems').put({ ...serverItem, _synced: true });
+        if (oldId && oldId !== newId) {
+          await db.table('inventoryItems').delete(oldId);
+        }
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 409 || isNotFoundError(err)) {
+        console.info(`inventoryItem ${entry.entityId} resolved on server during CREATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/farms/${farmId}/inventory/items/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/farms/${farmId}/inventory/items/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`inventoryItem ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farms/${farmId}/inventory/items/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farms/${farmId}/inventory/items/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`inventoryItem ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -173,9 +217,21 @@ registerSyncHandler('warehouse', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post(`/farms/${farmId}/inventory/warehouses`, entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/farms/${farmId}/inventory/warehouses/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/farms/${farmId}/inventory/warehouses/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`warehouse ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farms/${farmId}/inventory/warehouses/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farms/${farmId}/inventory/warehouses/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`warehouse ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -186,9 +242,21 @@ registerSyncHandler('inventoryCategory', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post(`/farms/${farmId}/inventory/categories`, entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/farms/${farmId}/inventory/categories/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/farms/${farmId}/inventory/categories/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`inventoryCategory ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farms/${farmId}/inventory/categories/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farms/${farmId}/inventory/categories/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`inventoryCategory ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -206,10 +274,38 @@ registerSyncHandler('financialTransaction', async (entry) => {
   const farmId = (entry.payload as any).farmId;
   if (!farmId) throw new Error('farmId missing from payload');
 
+  const payload = { ...(entry.payload as any) };
+  if (payload.transactionDate) {
+    try {
+      const parsedDate = new Date(payload.transactionDate);
+      if (!isNaN(parsedDate.getTime())) {
+        payload.transactionDate = parsedDate.toISOString();
+      } else {
+        payload.transactionDate = new Date().toISOString();
+      }
+    } catch {
+      payload.transactionDate = new Date().toISOString();
+    }
+  } else {
+    payload.transactionDate = new Date().toISOString();
+  }
+
   if (entry.operation === 'CREATE') {
-    await apiClient.post(`/farms/${farmId}/finance/transactions`, entry.payload);
+    try {
+      await apiClient.post(`/farms/${farmId}/finance/transactions`, payload);
+    } catch (err: any) {
+      if (err?.response?.status === 409 || isNotFoundError(err)) {
+        console.info(`financialTransaction ${entry.entityId} resolved on server during CREATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farms/${farmId}/finance/transactions/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farms/${farmId}/finance/transactions/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`financialTransaction ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -220,7 +316,13 @@ registerSyncHandler('financialBudget', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post(`/farms/${farmId}/finance/budgets`, entry.payload);
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farms/${farmId}/finance/budgets/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farms/${farmId}/finance/budgets/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`financialBudget ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -228,9 +330,21 @@ registerSyncHandler('farmActivity', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post('/activities', entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/activities/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/activities/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`farmActivity ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/activities/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/activities/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`farmActivity ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -238,9 +352,21 @@ registerSyncHandler('farmTask', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post('/tasks', entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/tasks/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/tasks/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`farmTask ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/tasks/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/tasks/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`farmTask ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -248,9 +374,21 @@ registerSyncHandler('workOrder', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post('/work-orders', entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/work-orders/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/work-orders/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`workOrder ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/work-orders/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/work-orders/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`workOrder ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -258,9 +396,21 @@ registerSyncHandler('equipment', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post('/equipment', entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/equipment/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/equipment/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`equipment ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/equipment/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/equipment/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`equipment ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -268,9 +418,21 @@ registerSyncHandler('laborRecord', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post('/labor-records', entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/labor-records/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/labor-records/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`laborRecord ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/labor-records/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/labor-records/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`laborRecord ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -278,9 +440,21 @@ registerSyncHandler('farmSchedule', async (entry) => {
   if (entry.operation === 'CREATE') {
     await apiClient.post('/farm-schedules', entry.payload);
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/farm-schedules/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/farm-schedules/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`farmSchedule ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/farm-schedules/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/farm-schedules/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`farmSchedule ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 
@@ -328,12 +502,18 @@ registerSyncHandler('farm', async (entry) => {
       }
     }
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/farms/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/farms/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`Farm ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
     try {
       await apiClient.delete(`/farms/${entry.entityId}`);
     } catch (err: any) {
-      if (err?.code === 'RESOURCE_NOT_FOUND' || err?.response?.status === 404) {
+      if (isNotFoundError(err)) {
         console.info(`Farm ${entry.entityId} already deleted or not found on server.`);
       } else {
         throw err;
@@ -355,9 +535,21 @@ registerSyncHandler('field', async (entry) => {
       }
     }
   } else if (entry.operation === 'UPDATE') {
-    await apiClient.put(`/fields/${entry.entityId}`, entry.payload);
+    try {
+      await apiClient.put(`/fields/${entry.entityId}`, entry.payload);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`field ${entry.entityId} not found on server during UPDATE. Marking satisfied.`);
+      } else { throw err; }
+    }
   } else if (entry.operation === 'DELETE') {
-    await apiClient.delete(`/fields/${entry.entityId}`);
+    try {
+      await apiClient.delete(`/fields/${entry.entityId}`);
+    } catch (err: any) {
+      if (isNotFoundError(err)) {
+        console.info(`field ${entry.entityId} not found on server during DELETE. Marking satisfied.`);
+      } else { throw err; }
+    }
   }
 });
 

@@ -10,7 +10,7 @@ import {
 import { useFarms } from '@/features/farms/api/farmsApi';
 import { useFields } from '@/features/fields/api/fieldsApi';
 import { useProfile, useMyFarmRoles } from '@/features/auth/api/profileApi';
-import { db } from '@/offline/db';
+import { syncQueue } from '@/offline/syncQueue';
 import { apiClient } from '@/lib/apiClient';
 
 import {
@@ -118,7 +118,7 @@ export default function TaskScreen() {
     // Poll Dexie sync queue size
     const interval = setInterval(async () => {
       try {
-        const count = await db.syncQueue.count();
+        const count = await syncQueue.getPendingCount();
         setPendingChanges(count);
       } catch {
         // ignore

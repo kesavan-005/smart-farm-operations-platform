@@ -28,10 +28,10 @@ public class FinancialAuditLog {
     @Column(nullable = false, length = 20)
     private String operation; // CREATE, UPDATE, DELETE
 
-    @Column(name = "old_value")
+    @Column(name = "old_value", columnDefinition = "TEXT")
     private String oldValue;
 
-    @Column(name = "new_value")
+    @Column(name = "new_value", columnDefinition = "TEXT")
     private String newValue;
 
     @Column(name = "ip_address", length = 45)

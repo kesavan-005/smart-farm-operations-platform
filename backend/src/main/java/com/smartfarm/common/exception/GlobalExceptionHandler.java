@@ -37,6 +37,16 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        log.warn("Malformed JSON request or date deserialization error: {}", ex.getMessage());
+        ApiError apiError = ApiError.builder()
+                .code("BAD_REQUEST")
+                .message("Malformed JSON or invalid date format")
+                .build();
+        return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         ApiError apiError = ApiError.builder()

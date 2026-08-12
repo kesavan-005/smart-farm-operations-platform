@@ -1,53 +1,57 @@
 {
   "dashboard": {
-    "title": "Financial Control Center",
-    "subtitle": "Real-time smart farm operational cash flows, budgets, and predictive AI insights",
+    "title": "Finance",
+    "subtitle": "Track your farm's income, expenses, payments, and financial performance.",
     "alerts": "Financial Alerts",
-    "alertsSubtitle": "Urgent conditions requiring managers' attention",
+    "alertsSubtitle": "Urgent conditions requiring attention",
     "aiInsights": "AI Financial Insights",
-    "aiInsightsSubtitle": "Rule-based predictive analysis recommendations",
-    "budgetUtilization": "Active Budgets Utilization",
-    "budgetUtilizationSubtitle": "Spent progress for category allocations",
-    "topExpenses": "Top Expenditures",
-    "topExpensesSubtitle": "High spend allocations",
+    "aiInsightsSubtitle": "Predictive analysis and recommendations",
+    "budgetUtilization": "Budget Utilization",
+    "budgetUtilizationSubtitle": "Spent progress for budget allocations",
+    "topExpenses": "Top Expenses",
+    "topExpensesSubtitle": "Highest spending categories",
     "topRevenue": "Top Revenue Sources",
-    "topRevenueSubtitle": "Top crop income contributors",
-    "recentActivities": "Recent Financial Activities",
-    "recentActivitiesSubtitle": "Live transaction timeline updates"
+    "topRevenueSubtitle": "Highest income contributors",
+    "recentActivities": "Recent Transactions",
+    "recentActivitiesSubtitle": "Latest financial activity",
+    "loading": "Loading financial data...",
+    "error": "Unable to load financial data."
   },
   "cards": {
     "revenueToday": "Revenue Today",
-    "revenueMonth": "Revenue This Month",
+    "revenueMonth": "Revenue this month",
     "expensesToday": "Expenses Today",
-    "expensesMonth": "Expenses This Month",
+    "expensesMonth": "Expenses this month",
     "netProfit": "Net Profit",
     "cashAvailable": "Cash Available",
     "inventoryValue": "Inventory Value",
     "outstandingPayments": "Outstanding Payments",
-    "budgetUtilization": "Budget Util.",
-    "roi": "Yield ROI"
+    "budgetUtilization": "Budget Utilization",
+    "roi": "Return on Investment"
   },
   "buttons": {
-    "recordMovement": "Record Movement",
-    "goToLedger": "Go to Ledger",
+    "recordMovement": "Record Transaction",
+    "goToLedger": "View All",
     "cancel": "Cancel",
-    "saveLimit": "Save Limit",
+    "saveLimit": "Save Budget",
     "saveTransaction": "Save Transaction",
     "saving": "Saving...",
     "confirmDelete": "Are you sure you want to delete this?",
     "exportCsv": "Export CSV",
-    "searchPlaceholder": "Search ledger transactions...",
+    "searchPlaceholder": "Search transactions...",
     "createBudget": "Create Budget",
     "allTypes": "All Types",
-    "allCategories": "All Categories"
+    "allCategories": "All Categories",
+    "retry": "Retry"
   },
   "status": {
     "online": "Online",
     "offline": "Offline",
-    "syncing": "Syncing",
-    "lastSync": "Sync Time",
+    "syncing": "changes pending sync",
+    "lastSync": "Last synced",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "allSynced": "All changes synced"
   },
   "badges": {
     "assetValue": "Asset Value",
@@ -58,32 +62,34 @@
     "overrun": "Overrun"
   },
   "alerts": {
-    "operationalStable": "Operational Security Stable",
-    "operationalStableDescription": "All category budgets are running under limit guidelines.",
+    "operationalStable": "All Clear",
+    "operationalStableDescription": "All budgets are within limits. No financial alerts.",
     "negativeCash": "Negative Cash Balance",
-    "negativeCashDescription": "Current cash margins are below ₹0.",
+    "negativeCashDescription": "Current cash balance is below ₹0.",
     "budgetExceeded": "Budget Exceeded",
     "budgetExceededDescription": "Budget limit exceeded for {{category}}."
   },
   "empty": {
-    "noTransactions": "No transactions logged yet.",
+    "noTransactions": "No transactions recorded yet.",
     "noRevenue": "No revenue recorded.",
-    "noExpenses": "No expenses logged yet",
-    "noAlerts": "No alerts active",
-    "noInsights": "No AI insights generated yet.",
-    "noBudgets": "No budget targets active. Define allocations to log expense thresholds.",
-    "noActivity": "No recent activities found."
+    "noExpenses": "No expenses recorded.",
+    "noAlerts": "No alerts active.",
+    "noInsights": "AI financial insights will appear here when enough financial data is available.",
+    "noBudgets": "No budget configured for this farm.",
+    "noActivity": "No recent transactions.",
+    "noData": "No financial data available for this farm yet.",
+    "offlineNotice": "Offline — showing last available data"
   },
   "nav": {
-    "dashboard": "Control Dashboard",
-    "transactions": "Transaction Ledger",
-    "accounting": "Advanced Accounting",
-    "journal": "General Journal Entries",
-    "budgets": "Budget Limits Control"
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "accounting": "Accounting",
+    "journal": "Journal Entries",
+    "budgets": "Budgets"
   },
   "form": {
-    "recordTitle": "Record Financial Movement",
-    "recordSubtitle": "Log a single transaction detail manually",
+    "recordTitle": "Record Transaction",
+    "recordSubtitle": "Enter the details of a financial transaction",
     "transactionType": "Transaction Type",
     "category": "Category",
     "amount": "Amount",
@@ -91,8 +97,8 @@
     "paymentMethod": "Payment Method",
     "status": "Status",
     "date": "Transaction Date",
-    "budgetTitle": "Create Budget Allotment",
-    "budgetSubtitle": "Define categories, limits, and operational cost margins",
+    "budgetTitle": "Create Budget",
+    "budgetSubtitle": "Set spending limits for expense categories",
     "startDate": "Start Date",
     "endDate": "End Date",
     "limit": "Budget Limit",
@@ -115,15 +121,15 @@
     "remaining": "Remaining"
   },
   "accounting": {
-    "title": "Double-entry Ledger Journals",
-    "subtitle": "Chronological general ledger accounts recording credits and debits",
+    "title": "Journal Entries",
+    "subtitle": "Double-entry ledger recording debits and credits",
     "account": "Account Name",
     "type": "Entry Type",
     "amount": "Amount",
-    "date": "Created Date",
+    "date": "Date",
     "debit": "Debit",
     "credit": "Credit",
-    "noEntries": "No journal entries found."
+    "noEntries": "No journal entries recorded yet."
   },
   "validation": {
     "categoryRequired": "Category is required",

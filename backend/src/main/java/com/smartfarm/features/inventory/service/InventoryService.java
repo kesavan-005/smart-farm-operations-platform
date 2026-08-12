@@ -237,7 +237,7 @@ public class InventoryService {
             item.setWarehouse(warehouse);
         }
 
-        if (item.getSku() == null || item.getSku().trim().isEmpty()) {
+        if (item.getSku() == null || item.getSku().trim().isEmpty() || itemRepository.findBySkuAndDeletedFalse(item.getSku()).isPresent()) {
             item.setSku("SKU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         }
 

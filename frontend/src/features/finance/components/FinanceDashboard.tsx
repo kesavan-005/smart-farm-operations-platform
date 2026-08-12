@@ -37,6 +37,7 @@ export default function FinanceDashboard({ dashboardData, transactions = [], isL
   if (isLoading && !transactions.length) {
     return (
       <div className="space-y-6 animate-pulse p-4">
+        <p className="text-sm text-muted-foreground text-center py-4">{t('dashboard.loading')}</p>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-28 bg-muted rounded-xl border border-border" />
@@ -333,7 +334,7 @@ export default function FinanceDashboard({ dashboardData, transactions = [], isL
           </div>
 
           <div className="space-y-3 flex-1 overflow-y-auto max-h-[160px] pr-1">
-            {d.aiInsights && d.aiInsights.map((ins: any, idx: number) => (
+            {d.aiInsights && d.aiInsights.length > 0 ? d.aiInsights.map((ins: any, idx: number) => (
               <div key={idx} className="flex gap-3 p-3 bg-primary/5 border border-primary/10 rounded-lg animate-fade-in">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
                 <div>
@@ -341,7 +342,12 @@ export default function FinanceDashboard({ dashboardData, transactions = [], isL
                   <p className="text-[10px] text-muted-foreground">{ins.description}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="flex gap-3 p-3 bg-muted/50 border border-border rounded-lg items-center">
+                <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
+                <p className="text-[10px] text-muted-foreground">{t('empty.noInsights')}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

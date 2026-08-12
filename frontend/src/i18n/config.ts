@@ -5,6 +5,10 @@ import { initReactI18next } from 'react-i18next';
 import translationEn from './locales/en/translation.json';
 import translationTa from './locales/ta/translation.json';
 
+// Separate namespace files
+import financeEn from './en/finance.json';
+import financeTa from './ta/finance.json';
+
 const resources = {
   en: {
     translation: translationEn,
@@ -12,7 +16,7 @@ const resources = {
     auth: translationEn.auth,
     nav: translationEn.nav,
     inventory: translationEn.inventory,
-    finance: translationEn.finance,
+    finance: financeEn,
     activities: translationEn.activity,
     tasks: translationEn.task,
   },
@@ -22,7 +26,7 @@ const resources = {
     auth: translationTa.auth,
     nav: translationTa.nav,
     inventory: translationTa.inventory,
-    finance: translationTa.finance,
+    finance: financeTa,
     activities: translationTa.activity,
     tasks: translationTa.task,
   },
