@@ -6,6 +6,8 @@ import { useMutation, useQueryClient, type MutationOptions } from '@tanstack/rea
 import { db } from './db';
 import { syncQueue } from './syncQueue';
 import { flushSyncQueue } from './syncManager';
+import { apiClient } from '@/lib/apiClient';
+import type { ApiResponse } from '@/types/api';
 import { v4 as uuidv4 } from 'uuid';
 
 interface OfflineMutationOptions<TData, TPayload> {
@@ -25,16 +27,6 @@ interface OfflineMutationOptions<TData, TPayload> {
 
 /**
  * Offline-first mutation hook.
- *
- * Usage:
- *   const { mutate } = useOfflineMutation({
- *     entityType: 'activity',
- *     tableName: 'activities',
- *     operation: 'CREATE',
- *     invalidateKeys: [['activities', cropId]],
- *   });
- *
- *   mutate({ cropId, date: '2026-01-15', description: 'Watering' });
  */
 export function useOfflineMutation<
   TData extends { id: string },
@@ -51,7 +43,26 @@ export function useOfflineMutation<
         transformForLocal,
       } = options;
 
-      // Generate client-side ID for new entities
+      // If online and creating a primary entity like farm/field, post directly to get real server UUID
+      if (navigator.onLine && operation === 'CREATE' && (entityType === 'farm' || entityType === 'field')) {
+        try {
+          const basePath = `/${entityType}s`;
+          const requestPayload = entityType === 'farm'
+            ? { state: 'Tamil Nadu', status: 'active', ...payload }
+            : payload;
+          const response = await apiClient.post<ApiResponse<TData>>(basePath, requestPayload);
+          const serverEntity = response.data.data;
+          if (serverEntity && serverEntity.id) {
+            const table = db.table(tableName);
+            await table.put({ ...serverEntity, _synced: true });
+            return serverEntity;
+          }
+        } catch (err) {
+          console.warn(`Direct online creation failed for ${entityType}, falling back to offline queue`, err);
+        }
+      }
+
+      // Generate client-side ID for offline/fallback entities
       const entityId = (payload as Record<string, unknown>).id as string ?? uuidv4();
       const now = new Date().toISOString();
 
@@ -85,7 +96,6 @@ export function useOfflineMutation<
 
       // Step 3: Attempt immediate flush if online
       if (navigator.onLine) {
-        // Fire and forget — don't block the UI on network
         flushSyncQueue().catch(() => {
           // Failure is expected offline; sync queue will retry
         });

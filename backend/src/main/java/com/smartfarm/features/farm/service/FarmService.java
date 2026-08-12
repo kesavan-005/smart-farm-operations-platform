@@ -59,6 +59,12 @@ public class FarmService {
             }
         }
 
+        // Fallback default coordinates if lat/lng are missing so weather is always available
+        if (farm.getLatitude() == null || farm.getLongitude() == null) {
+            farm.setLatitude(BigDecimal.valueOf(10.6609));
+            farm.setLongitude(BigDecimal.valueOf(77.0048));
+        }
+
         farm = farmRepository.save(farm);
         log.info("Created farm with code: {}", farmCode);
         return farmMapper.toResponse(farm);

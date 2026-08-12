@@ -5,6 +5,7 @@ import { syncQueue, SyncQueue } from './syncQueue';
 import { db } from './db';
 import { useFarmStore } from '@/store/farmStore';
 import { apiClient } from '@/lib/apiClient';
+import { queryClient } from '@/lib/queryClient';
 import type { ApiResponse, SyncQueueEntry } from '@/types/api';
 import type { Farm, Field } from '@/types/domain';
 
@@ -302,6 +303,7 @@ registerSyncHandler('farm', async (entry) => {
         if (farmStore.activeFarmId === oldId) {
           farmStore.setActiveFarmId(newId);
         }
+        queryClient.invalidateQueries({ queryKey: ['farms'], exact: false });
       }
     }
   } else if (entry.operation === 'UPDATE') {

@@ -31,8 +31,11 @@ export default function FarmListScreen() {
 
   const handleCreate = async (formData: FarmFormData) => {
     try {
-      await createFarmMutation.mutateAsync(formData);
+      const createdFarm = await createFarmMutation.mutateAsync(formData);
       toast({ title: t('farm.createSuccess', 'Farm created successfully') });
+      if (createdFarm && createdFarm.id) {
+        setActiveFarmId(createdFarm.id);
+      }
       setView('list');
     } catch (err: any) {
       toast({ variant: 'destructive', title: t('error'), description: err.message });
