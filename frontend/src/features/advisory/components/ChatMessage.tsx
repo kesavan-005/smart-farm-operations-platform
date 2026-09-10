@@ -1,5 +1,6 @@
 import { User, Sparkles, CloudRain, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
 import type { AdvisorySource } from '../api/types';
 
 export type ChatMessageData = {
@@ -36,14 +37,28 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         {/* Bubble */}
         <div
-          className={`sf-card p-3 sm:p-4 rounded-2xl text-sm ${
+          className={`p-3 sm:p-4 rounded-2xl text-sm ${
             isUser
-              ? 'bg-primary text-primary-foreground rounded-tr-sm border-transparent'
-              : 'bg-card text-foreground rounded-tl-sm'
+              ? 'bg-primary text-primary-foreground rounded-tr-sm shadow-sm'
+              : 'sf-card bg-card text-foreground rounded-tl-sm'
           }`}
         >
-          <div className="whitespace-pre-wrap break-words leading-relaxed">
-            {message.content}
+          <div className="break-words leading-relaxed markdown-body">
+            <ReactMarkdown
+              components={{
+                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 last:mb-0" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 last:mb-0" {...props} />,
+                li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2 mt-4" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-md font-bold mb-2 mt-3" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2 mt-3" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                em: ({node, ...props}) => <em className="italic" {...props} />,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
           
           {!isUser && message.sources && message.sources.length > 0 && (

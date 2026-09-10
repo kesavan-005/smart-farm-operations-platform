@@ -41,7 +41,6 @@ const SensorsPage = lazy(() => import('./ComingSoonPage'));
 const DevicesPage = lazy(() => import('./ComingSoonPage'));
 
 // AI & Automation placeholders (Phase 1 sidebar, no functionality)
-const AIAdvisoryPage = lazy(() => import('@/features/advisory/components/AdvisoryScreen'));
 const AutomationPage = lazy(() => import('./ComingSoonPage'));
 
 // Supporting pages (Phase 4+)
@@ -175,8 +174,10 @@ export const router = createBrowserRouter([
       { path: '/sensors', element: <PermissionGuard module="MONITORING"><SuspenseWrapper><SensorsPage /></SuspenseWrapper></PermissionGuard> },
       { path: '/devices', element: <PermissionGuard module="MONITORING"><SuspenseWrapper><DevicesPage /></SuspenseWrapper></PermissionGuard> },
 
-      // AI Advisory placeholder
-      { path: '/ai-advisory', element: <PermissionGuard module="AI_ADVISORY"><SuspenseWrapper><AIAdvisoryPage /></SuspenseWrapper></PermissionGuard> },
+      // Deprecated standalone AI Advisory route - redirect to dashboard where widget lives
+      { path: '/ai-advisory', element: <Navigate to="/dashboard" replace /> },
+      
+      // Automation placeholder
       { path: '/automation', element: <SuspenseWrapper><AutomationPage /></SuspenseWrapper> },
 
       // Supporting modules

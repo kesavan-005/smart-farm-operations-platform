@@ -10,7 +10,7 @@ import {
   LogOut, Settings, HelpCircle,
   Leaf, Menu, X, Monitor, PanelLeftClose, PanelLeft,
   Activity, CheckSquare, Calendar, GitBranch,
-  CloudSun, Bot,
+  CloudSun,
   Sprout, MapPin, ChevronDown, ChevronRight,
 } from 'lucide-react';
 
@@ -21,6 +21,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { useFarmStore } from '@/store/farmStore';
 import { usePermissionStore } from '@/store/permissionStore';
 import { useFarms } from '@/features/farms/api/farmsApi';
+import { AdvisoryWidget } from '@/features/advisory/components/AdvisoryWidget';
 
 interface AppLayoutProps {
   children?: ReactNode;
@@ -173,8 +174,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     { kind: 'divider' },
     { kind: 'leaf', path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory', module: 'INVENTORY' },
     { kind: 'leaf', path: '/expenses', icon: Wallet, labelKey: 'nav:finance', defaultLabel: 'Finance', module: 'FINANCE' },
-    { kind: 'divider' },
-    { kind: 'leaf', path: '/ai-advisory', icon: Bot, labelKey: 'nav:aiAdvisory', defaultLabel: 'AI Advisory', comingSoon: true, module: 'AI_ADVISORY' },
     { kind: 'divider' },
     { kind: 'leaf', path: '/notifications', icon: Bell, labelKey: 'nav:notifications', defaultLabel: 'Notifications', module: 'NOTIFICATIONS' },
     { kind: 'leaf', path: '/settings', icon: Settings, labelKey: 'nav:settings', defaultLabel: 'Settings' },
@@ -671,6 +670,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </>
       )}
+
+      {/* ========== Floating AI Advisory Widget ========== */}
+      <AdvisoryWidget />
     </div>
   );
 }
