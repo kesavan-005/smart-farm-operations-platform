@@ -31,6 +31,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.smartfarm.features.auth.security.FarmAuthorizationService;
+import com.smartfarm.features.weather.service.WeatherService;
+import com.smartfarm.features.weather.dto.WeatherResponse;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FarmContextService {
@@ -41,15 +47,18 @@ public class FarmContextService {
     private final ActivityRepository activityRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final FarmAuthorizationService farmAuthorizationService;
+    private final WeatherService weatherService;
 
     @Transactional(readOnly = true)
     public FarmContextResponse getFarmContext(UUID farmId, UUID userId) {
+        // 1. Correct Authorization Boundary
+        if (!farmAuthorizationService.hasFarmAccess(userId, farmId)) {
+            throw new AccessDeniedException("Access denied to this farm context");
+        }
+
         Farm farm = farmRepository.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
-
-        if (!farm.getOwner().getId().equals(userId)) {
-            throw new AccessDeniedException("Access denied to this farm");
-        }
 
         // 1. Profile
         FarmProfile profile = FarmProfile.builder()
@@ -188,6 +197,15 @@ public class FarmContextService {
                 .recentActivityCount(recentActivities.size())
                 .build();
 
+        // 8. Weather Integration (Graceful Degradation)
+        WeatherResponse weather = null;
+        try {
+            weather = weatherService.getWeatherForAuthorizedFarm(farm);
+        } catch (Exception ex) {
+            log.warn("Weather integration unavailable for farm {}: {}", farmId, ex.getMessage());
+            // Weather is intentionally left null if unavailable, per design rules
+        }
+
         return FarmContextResponse.builder()
                 .farmProfile(profile)
                 .summary(summary)
@@ -197,6 +215,7 @@ public class FarmContextService {
                 .financeSummary(financeSummary)
                 .inventorySummary(inventorySummary)
                 .attentionItems(attentionItems)
+                .weather(weather)
                 .build();
     }
 

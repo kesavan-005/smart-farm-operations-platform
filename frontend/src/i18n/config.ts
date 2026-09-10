@@ -8,6 +8,8 @@ import translationTa from './locales/ta/translation.json';
 // Separate namespace files
 import financeEn from './en/finance.json';
 import financeTa from './ta/finance.json';
+import advisoryEn from './en/advisory.json';
+import advisoryTa from './ta/advisory.json';
 
 const resources = {
   en: {
@@ -19,6 +21,7 @@ const resources = {
     finance: financeEn,
     activities: translationEn.activity,
     tasks: translationEn.task,
+    advisory: advisoryEn,
   },
   ta: {
     translation: translationTa,
@@ -29,6 +32,7 @@ const resources = {
     finance: financeTa,
     activities: translationTa.activity,
     tasks: translationTa.task,
+    advisory: advisoryTa,
   },
 };
 
@@ -42,7 +46,7 @@ i18n
     fallbackLng: 'en',
     defaultNS: 'translation',
     fallbackNS: 'translation',
-    ns: ['translation', 'common', 'auth', 'nav', 'inventory', 'finance', 'activities', 'tasks'],
+    ns: ['translation', 'common', 'auth', 'nav', 'inventory', 'finance', 'activities', 'tasks', 'advisory'],
     interpolation: {
       escapeValue: false, // React escapes HTML by default
     },

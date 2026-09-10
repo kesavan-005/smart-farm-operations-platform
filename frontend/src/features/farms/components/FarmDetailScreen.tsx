@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/states/LoadingState';
 import { EmptyState } from '@/components/ui/states/EmptyState';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissionStore } from '@/store/permissionStore';
 import { ArrowLeft, Plus, MapPin, Activity, Clock, FileText, Leaf, Edit2, Trash2, Eye, Beaker, Map as MapIcon } from 'lucide-react';
 import type { Field } from '@/types/domain';
 import { calculateFarmArea } from '@/utils/geofenceUtils';
@@ -19,6 +20,7 @@ export default function FarmDetailScreen() {
   const { t, i18n } = useTranslation(['common']);
   const isTa = i18n.language === 'ta';
   const { toast } = useToast();
+  const { hasModuleAccess } = usePermissionStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'fields' | 'stats' | 'timeline' | 'docs'>('overview');
   const [fieldView, setFieldView] = useState<'list' | 'create' | 'edit'>('list');
@@ -102,9 +104,11 @@ export default function FarmDetailScreen() {
                 </div>
               </div>
             </div>
-            <Button className="gap-1.5 h-8 bg-primary hover:bg-primary/90 text-primary-foreground text-xs" onClick={() => { setActiveTab('fields'); setFieldView('create'); }}>
-              <Plus className="w-3.5 h-3.5" /> Add Field
-            </Button>
+            {hasModuleAccess('OPERATIONS', 'FULL_ACCESS') && (
+              <Button className="gap-1.5 h-8 bg-primary hover:bg-primary/90 text-primary-foreground text-xs" onClick={() => { setActiveTab('fields'); setFieldView('create'); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Field
+              </Button>
+            )}
           </div>
 
           {/* Tabs */}
@@ -205,7 +209,12 @@ export default function FarmDetailScreen() {
           {fieldView === 'edit' && editingField && (
             <div className="sf-card p-5">
               <h2 className="text-sm font-semibold text-foreground mb-4">Edit Field</h2>
-              <FieldForm initialData={editingField as any} onSubmit={handleUpdateField} onCancel={() => { setFieldView('list'); setEditingField(null); }} isSubmitting={updateFieldMutation.isPending} />
+              <FieldForm
+                initialData={{ ...(editingField as any), fieldCode: editingField.fieldCode }}
+                onSubmit={handleUpdateField}
+                onCancel={() => { setFieldView('list'); setEditingField(null); }}
+                isSubmitting={updateFieldMutation.isPending}
+              />
             </div>
           )}
           {fieldView === 'list' && (
@@ -217,8 +226,8 @@ export default function FarmDetailScreen() {
                   icon={Leaf}
                   title="No fields yet"
                   description="Add your first field to start tracking crops."
-                  actionLabel="Add Field"
-                  onAction={() => setFieldView('create')}
+                  actionLabel={hasModuleAccess('OPERATIONS', 'FULL_ACCESS') ? "Add Field" : undefined}
+                  onAction={hasModuleAccess('OPERATIONS', 'FULL_ACCESS') ? () => setFieldView('create') : undefined}
                   secondaryActionLabel="Go back to Dashboard"
                   onSecondaryAction={() => navigate('/dashboard')}
                 />

@@ -3,8 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Info, Map, Beaker, Save, Loader2, FileText } from 'lucide-react';
+import { Info, Map, Beaker, Save, Loader2, FileText, Copy, Check, Hash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 
 export const fieldSchema = z.object({
   name: z.string().min(1, 'Field name is required').max(100),
@@ -28,7 +29,7 @@ export const fieldSchema = z.object({
 export type FieldFormData = z.infer<typeof fieldSchema>;
 
 interface FieldFormProps {
-  initialData?: Partial<FieldFormData & { boundary?: GeoJSON.Polygon }>;
+  initialData?: Partial<FieldFormData & { boundary?: GeoJSON.Polygon; fieldCode?: string }>;
   onSubmit: (data: any) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
@@ -37,6 +38,10 @@ interface FieldFormProps {
 export default function FieldForm({ initialData, onSubmit, onCancel, isSubmitting }: FieldFormProps) {
   const { t, i18n } = useTranslation(['common']);
   const isTa = i18n.language === 'ta';
+  const [copied, setCopied] = useState(false);
+
+  // The fieldCode from initialData is purely for display; it is NEVER submitted.
+  const existingFieldCode = initialData?.fieldCode;
 
   // Format initial boundary coordinate lists back to text
   let defaultCoordsText = '';
@@ -93,12 +98,69 @@ export default function FieldForm({ initialData, onSubmit, onCancel, isSubmittin
       }
     }
 
+    // Omit boundaryCoordsText and fieldCode from submission payload
     const { boundaryCoordsText, ...submitPayload } = data;
     onSubmit({ ...submitPayload, boundary });
   };
 
+  const handleCopyCode = async () => {
+    if (!existingFieldCode) return;
+    try {
+      await navigator.clipboard.writeText(existingFieldCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for environments without clipboard API
+      const el = document.createElement('textarea');
+      el.value = existingFieldCode;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmitHandler as any)} className="space-y-6">
+      {/* Field Code — Read-Only Display (edit mode only) */}
+      {existingFieldCode && (
+        <div className="sf-card p-4 border-primary/20 bg-primary/[0.02] dark:bg-primary/5">
+          <div className="flex items-center gap-2 mb-2">
+            <Hash className="w-3.5 h-3.5 text-primary" />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {isTa ? t('fieldCode') : t('fieldCode')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 font-mono text-sm font-bold text-foreground bg-muted px-3 py-2 rounded-lg border border-border tracking-wide">
+              {existingFieldCode}
+            </code>
+            <button
+              type="button"
+              onClick={handleCopyCode}
+              title={isTa ? t('copyCode') : t('copyCode')}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+            >
+              {copied
+                ? <Check className="w-4 h-4 text-emerald-500" />
+                : <Copy className="w-4 h-4" />
+              }
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+            <Info className="w-3 h-3" />
+            {isTa ? 'இந்த குறியீடு நிரந்தரமானது மற்றும் மாற்ற முடியாதது' : 'This code is permanent and cannot be changed'}
+          </p>
+          {copied && (
+            <p className="text-[10px] text-emerald-500 mt-1 font-medium">
+              ✓ {isTa ? t('codeCopied') : t('codeCopied')}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Basic Details */}
       <FormSection icon={Info} title={isTa ? 'நில விவரங்கள்' : 'Field Details'}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -135,7 +197,7 @@ export default function FieldForm({ initialData, onSubmit, onCancel, isSubmittin
             {...register('boundaryCoordsText')}
             rows={5}
             className="w-full px-3 py-2 border border-input rounded-lg text-sm bg-background font-mono focus:outline-none focus:ring-2 focus:ring-ring/50 resize-none"
-            placeholder="e.g.&#10;78.1100, 9.9200&#10;78.1200, 9.9200&#10;78.1200, 9.9300&#10;78.1100, 9.9200"
+            placeholder={`e.g.\n78.1100, 9.9200\n78.1200, 9.9200\n78.1200, 9.9300\n78.1100, 9.9200`}
           />
           <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5" />

@@ -35,5 +35,10 @@
   "tamil": "தமிழ்",
   "theme": "Theme",
   "themeDefault": "Default",
-  "themeHighContrast": "High Contrast"
+  "themeHighContrast": "High Contrast",
+  "fieldCode": "Field Code",
+  "copyCode": "Copy Code",
+  "codeCopied": "Code copied",
+  "searchFieldCode": "Search Field Code",
+  "fieldCodeReadOnly": "This code is permanent and cannot be changed"
 }

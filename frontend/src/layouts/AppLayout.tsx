@@ -8,7 +8,10 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Tractor, Package, Wallet, Search, Bell, Moon, Sun,
   LogOut, Settings, HelpCircle,
-  Leaf, Menu, X, Monitor, PanelLeftClose, PanelLeft, HeartPulse
+  Leaf, Menu, X, Monitor, PanelLeftClose, PanelLeft,
+  Activity, CheckSquare, Calendar, GitBranch,
+  CloudSun, Bot,
+  Sprout, MapPin, ChevronDown, ChevronRight,
 } from 'lucide-react';
 
 import { useSyncStatus } from '@/offline';
@@ -16,11 +19,43 @@ import { useLanguageStore } from '@/store/languageStore';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useFarmStore } from '@/store/farmStore';
+import { usePermissionStore } from '@/store/permissionStore';
 import { useFarms } from '@/features/farms/api/farmsApi';
 
 interface AppLayoutProps {
   children?: ReactNode;
 }
+
+// ─── Nav types ───────────────────────────────────────────────────────────────
+
+interface NavLeaf {
+  kind: 'leaf';
+  path: string;
+  icon: React.ElementType;
+  labelKey: string;
+  defaultLabel: string;
+  /** If true, show a "Coming soon" badge */
+  comingSoon?: boolean;
+  module?: import('@/types/permissions').FarmModule;
+}
+
+interface NavGroup {
+  kind: 'group';
+  id: string;
+  icon: React.ElementType;
+  labelKey: string;
+  defaultLabel: string;
+  children: NavLeaf[];
+  module?: import('@/types/permissions').FarmModule;
+}
+
+interface NavDivider {
+  kind: 'divider';
+}
+
+type NavItem = NavLeaf | NavGroup | NavDivider;
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation(['common', 'nav']);
@@ -30,7 +65,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { toggleLanguage, language } = useLanguageStore();
   const { user, clearSession } = useAuthStore();
   const { theme, setTheme, resolved } = useThemeStore();
-  
+  const { loadFarmPermissions, clearPermissions, canAccess } = usePermissionStore();
+
   const { data: farms = [] } = useFarms();
   const { activeFarmId, setActiveFarmId, initializeActiveFarm } = useFarmStore();
 
@@ -41,41 +77,131 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [farms, user?.farmId, initializeActiveFarm]);
 
   const currentActiveId = activeFarmId || (farms.length > 0 ? farms[0]!.id : null);
-  const farmHealthPath = currentActiveId ? `/farms/${currentActiveId}/health` : '/onboarding';
 
-  // Navigation structure with groups
-  const NAV_GROUPS = [
+  useEffect(() => {
+    if (currentActiveId) {
+      loadFarmPermissions(currentActiveId);
+    } else {
+      clearPermissions();
+    }
+  }, [currentActiveId, loadFarmPermissions, clearPermissions]);
+
+  // ── Expandable group state ─────────────────────────────────────────────────
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    farmManagement: true,
+    operations: true,
+    monitoring: false,
+  });
+
+  const toggleGroup = (id: string) =>
+    setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Auto-expand group that contains the active route
+  useEffect(() => {
+    const path = location.pathname;
+    if (['/farms', '/fields', '/crops'].some(p => path.startsWith(p))) {
+      setExpandedGroups(prev => ({ ...prev, farmManagement: true }));
+    }
+    if (['/activities', '/tasks', '/calendar', '/timeline'].some(p => path.startsWith(p))) {
+      setExpandedGroups(prev => ({ ...prev, operations: true }));
+    }
+    if (['/weather', '/sensors', '/devices'].some(p => path.startsWith(p))) {
+      setExpandedGroups(prev => ({ ...prev, monitoring: true }));
+    }
+  }, [location.pathname]);
+
+  // ── Nav definition ─────────────────────────────────────────────────────────
+  const ALL_NAV_ITEMS: NavItem[] = [
     {
-      label: 'nav:main',
-      items: [
-        { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard', defaultLabel: 'Dashboard' },
-        { path: farmHealthPath, icon: HeartPulse, labelKey: 'nav:farmHealth', defaultLabel: 'Farm Health' },
-        { path: '/farms', icon: Tractor, labelKey: 'nav:farms', defaultLabel: 'Farms' },
+      kind: 'leaf',
+      path: '/dashboard',
+      icon: LayoutDashboard,
+      labelKey: 'nav:dashboard',
+      defaultLabel: 'Dashboard',
+    },
+    { kind: 'divider' },
+    {
+      kind: 'group',
+      id: 'farmManagement',
+      icon: Tractor,
+      labelKey: 'nav:farmManagement',
+      defaultLabel: 'Farm Management',
+      module: 'FARM_MANAGEMENT',
+      children: [
+        { kind: 'leaf', path: '/farms', icon: Tractor, labelKey: 'nav:farms', defaultLabel: 'Farms' },
+        {
+          kind: 'leaf',
+          path: currentActiveId ? `/farms/${currentActiveId}` : '/farms',
+          icon: MapPin,
+          labelKey: 'nav:fields',
+          defaultLabel: 'Fields',
+        },
+        {
+          kind: 'leaf',
+          path: currentActiveId ? `/farms/${currentActiveId}` : '/farms',
+          icon: Sprout,
+          labelKey: 'nav:crops',
+          defaultLabel: 'Crops',
+        },
       ],
     },
     {
-      label: 'nav:management',
-      items: [
-        { path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory' },
-        { path: '/expenses', icon: Wallet, labelKey: 'nav:finance', defaultLabel: 'Finance' },
+      kind: 'group',
+      id: 'operations',
+      icon: Activity,
+      labelKey: 'nav:operations',
+      defaultLabel: 'Operations',
+      module: 'OPERATIONS',
+      children: [
+        { kind: 'leaf', path: '/activities', icon: Activity, labelKey: 'nav:activities', defaultLabel: 'Activities' },
+        { kind: 'leaf', path: '/tasks', icon: CheckSquare, labelKey: 'nav:tasks', defaultLabel: 'Tasks' },
+        { kind: 'leaf', path: '/calendar', icon: Calendar, labelKey: 'nav:calendar', defaultLabel: 'Calendar', comingSoon: true },
+        { kind: 'leaf', path: '/timeline', icon: GitBranch, labelKey: 'nav:timeline', defaultLabel: 'Timeline', comingSoon: true },
       ],
     },
     {
-      label: 'nav:system',
-      items: [
-        { path: '/notifications', icon: Bell, labelKey: 'nav:notifications', defaultLabel: 'Notifications' },
-        { path: '/settings', icon: Settings, labelKey: 'nav:settings', defaultLabel: 'Settings' },
-        { path: '/help', icon: HelpCircle, labelKey: 'nav:help', defaultLabel: 'Help' },
+      kind: 'group',
+      id: 'monitoring',
+      icon: CloudSun,
+      labelKey: 'nav:monitoring',
+      defaultLabel: 'Monitoring',
+      module: 'MONITORING',
+      children: [
+        { kind: 'leaf', path: '/weather', icon: CloudSun, labelKey: 'nav:weather', defaultLabel: 'Weather' },
       ],
     },
+    { kind: 'divider' },
+    { kind: 'leaf', path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory', module: 'INVENTORY' },
+    { kind: 'leaf', path: '/expenses', icon: Wallet, labelKey: 'nav:finance', defaultLabel: 'Finance', module: 'FINANCE' },
+    { kind: 'divider' },
+    { kind: 'leaf', path: '/ai-advisory', icon: Bot, labelKey: 'nav:aiAdvisory', defaultLabel: 'AI Advisory', comingSoon: true, module: 'AI_ADVISORY' },
+    { kind: 'divider' },
+    { kind: 'leaf', path: '/notifications', icon: Bell, labelKey: 'nav:notifications', defaultLabel: 'Notifications', module: 'NOTIFICATIONS' },
+    { kind: 'leaf', path: '/settings', icon: Settings, labelKey: 'nav:settings', defaultLabel: 'Settings' },
+    { kind: 'leaf', path: '/help', icon: HelpCircle, labelKey: 'nav:help', defaultLabel: 'Help' },
   ];
 
-  const MOBILE_NAV = [
-    { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard', defaultLabel: 'Dashboard' },
-    { path: farmHealthPath, icon: HeartPulse, labelKey: 'nav:farmHealth', defaultLabel: 'Farm Health' },
-    { path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory' },
-    { path: '/settings', icon: Menu, labelKey: 'nav:more', defaultLabel: 'More' },
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter((item) => {
+    if (item.kind === 'leaf' && item.module) {
+      return canAccess(item.module!);
+    }
+    if (item.kind === 'group' && item.module) {
+      return canAccess(item.module!);
+    }
+    return true;
+  });
+
+  // ── Mobile bottom nav ──────────────────────────────────────────────────────
+  const rawMobileNav: NavLeaf[] = [
+    { kind: 'leaf', path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav:dashboard', defaultLabel: 'Dashboard' },
+    { kind: 'leaf', path: '/farms', icon: Tractor, labelKey: 'nav:farms', defaultLabel: 'Farms', module: 'FARM_MANAGEMENT' },
+    { kind: 'leaf', path: '/inventory', icon: Package, labelKey: 'nav:inventory', defaultLabel: 'Inventory', module: 'INVENTORY' },
+    { kind: 'leaf', path: '/notifications', icon: Bell, labelKey: 'nav:notifications', defaultLabel: 'Alerts', module: 'NOTIFICATIONS' },
   ];
+
+  const MOBILE_NAV = rawMobileNav.filter((item) => !item.module || canAccess(item.module!));
+
+
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -98,6 +224,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const handleFarmChange = (newFarmId: string) => {
+    clearPermissions();
     setActiveFarmId(newFarmId);
     if (location.pathname.includes('/health')) {
       navigate(`/farms/${newFarmId}/health`);
@@ -106,8 +233,178 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   };
 
+
   // Breadcrumb from path
   const pathSegments = location.pathname.split('/').filter(Boolean);
+
+  // ── Helper: is any child of a group active ─────────────────────────────────
+  const isGroupActive = (group: NavGroup): boolean =>
+    group.children.some(child => location.pathname.startsWith(child.path));
+
+  // ── Render a single sidebar leaf NavLink ───────────────────────────────────
+  const renderLeaf = (item: NavLeaf, indent = false) => {
+    const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+    return (
+      <NavLink
+        key={item.labelKey}
+        to={item.path}
+        title={isSidebarCollapsed ? t(item.labelKey, item.defaultLabel) : undefined}
+        className={({ isActive: navActive }) =>
+          `group relative flex items-center gap-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+            isSidebarCollapsed ? 'justify-center h-10 w-10 mx-auto' : `${indent ? 'pl-8 pr-3' : 'px-3'} h-9`
+          } ${
+            (navActive && item.path !== '/farms') || (isActive && item.path !== '/farms')
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          }`
+        }
+      >
+        {({ isActive: navActive }) => (
+          <>
+            {(navActive || isActive) && !isSidebarCollapsed && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-primary rounded-r-full" />
+            )}
+            <item.icon className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && (
+              <>
+                <span className="flex-1 truncate">{t(item.labelKey, item.defaultLabel)}</span>
+                {item.comingSoon && (
+                  <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/70 shrink-0">
+                    Soon
+                  </span>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </NavLink>
+    );
+  };
+
+  // ── Render a collapsible group ─────────────────────────────────────────────
+  const renderGroup = (item: NavGroup) => {
+    const isOpen = expandedGroups[item.id] ?? false;
+    const groupActive = isGroupActive(item);
+
+    if (isSidebarCollapsed) {
+      // In collapsed mode, show only the group icon (no expand arrow)
+      return (
+        <div key={item.id} className="space-y-0.5">
+          <button
+            title={t(item.labelKey, item.defaultLabel)}
+            onClick={() => toggleGroup(item.id)}
+            className={`flex items-center justify-center h-10 w-10 mx-auto rounded-lg transition-all duration-150 ${
+              groupActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+          >
+            <item.icon className="w-4 h-4" />
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div key={item.id}>
+        {/* Group header button */}
+        <button
+          onClick={() => toggleGroup(item.id)}
+          className={`w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+            groupActive && !isOpen
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          }`}
+        >
+          <item.icon className="w-4 h-4 shrink-0" />
+          <span className="flex-1 text-left truncate">{t(item.labelKey, item.defaultLabel)}</span>
+          {isOpen
+            ? <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-60" />
+            : <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-60" />
+          }
+        </button>
+
+        {/* Children */}
+        {isOpen && (
+          <div className="mt-0.5 space-y-0.5">
+            {item.children.map(child => renderLeaf(child, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Render a divider ───────────────────────────────────────────────────────
+  const renderDivider = (index: number) => (
+    <div key={`divider-${index}`} className={`my-1 border-t border-border/50 ${isSidebarCollapsed ? 'mx-2' : 'mx-3'}`} />
+  );
+
+  // ── Render all nav items ───────────────────────────────────────────────────
+  const renderNavItems = (items: NavItem[], forMobile = false) =>
+    items.map((item, i) => {
+      if (item.kind === 'divider') return renderDivider(i);
+      if (item.kind === 'group') {
+        // Mobile: flatten groups with a label header
+        if (forMobile) {
+          return (
+            <div key={item.id}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-3 mb-1 mt-2">
+                {t(item.labelKey, item.defaultLabel)}
+              </p>
+              <div className="space-y-0.5">
+                {item.children.map(child => (
+                  <NavLink
+                    key={child.labelKey}
+                    to={child.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 pl-6 pr-3 h-10 rounded-lg text-[13px] font-medium transition-colors ${
+                        isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                      }`
+                    }
+                  >
+                    <child.icon className="w-4 h-4" />
+                    <span className="flex-1">{t(child.labelKey, child.defaultLabel)}</span>
+                    {child.comingSoon && (
+                      <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/70">
+                        Soon
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        return renderGroup(item);
+      }
+      // Leaf
+      if (forMobile) {
+        return (
+          <NavLink
+            key={item.labelKey}
+            to={item.path}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-3 h-10 rounded-lg text-[13px] font-medium transition-colors ${
+                isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              }`
+            }
+          >
+            <item.icon className="w-4 h-4" />
+            <span className="flex-1">{t(item.labelKey, item.defaultLabel)}</span>
+            {item.comingSoon && (
+              <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/70">
+                Soon
+              </span>
+            )}
+          </NavLink>
+        );
+      }
+      return (
+        <div key={item.labelKey} className="space-y-0.5">
+          {renderLeaf(item, false)}
+        </div>
+      );
+    });
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -130,44 +427,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-3 space-y-5">
-          {NAV_GROUPS.map((group, gi) => (
-            <div key={gi}>
-              {!isSidebarCollapsed && (
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-3 mb-1.5">
-                  {t(group.label)}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map(({ path, icon: Icon, labelKey, defaultLabel }) => (
-                  <NavLink
-                    key={path}
-                    to={path}
-                    title={isSidebarCollapsed ? t(labelKey, defaultLabel) : undefined}
-                    className={({ isActive }) =>
-                      `group relative flex items-center gap-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                        isSidebarCollapsed ? 'justify-center h-10 w-10 mx-auto' : 'px-3 h-9'
-                      } ${
-                        isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && !isSidebarCollapsed && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-primary rounded-r-full" />
-                        )}
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {!isSidebarCollapsed && <span>{t(labelKey, defaultLabel)}</span>}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          ))}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-3 space-y-0.5">
+          {renderNavItems(NAV_ITEMS)}
         </nav>
 
         {/* User Card + Collapse Toggle */}
@@ -345,7 +606,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="flex items-center justify-around h-16 px-2">
           {MOBILE_NAV.map(({ path, icon: Icon, labelKey, defaultLabel }) => (
             <NavLink
-              key={path}
+              key={labelKey}
               to={path}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-xl transition-colors ${
@@ -387,29 +648,8 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
 
             {/* Nav links */}
-            <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
-              {NAV_GROUPS.map((group, gi) => (
-                <div key={gi}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1.5">{t(group.label)}</p>
-                  <div className="space-y-0.5">
-                    {group.items.map(({ path, icon: Icon, labelKey, defaultLabel }) => (
-                      <NavLink
-                        key={path}
-                        to={path}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center gap-2.5 px-3 h-10 rounded-lg text-[13px] font-medium transition-colors ${
-                            isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                          }`
-                        }
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{t(labelKey, defaultLabel)}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+              {renderNavItems(NAV_ITEMS, true)}
             </nav>
 
             {/* User */}

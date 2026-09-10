@@ -2,24 +2,29 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLanguageStore } from '@/store/languageStore';
 import { useThemeStore, type ThemeMode } from '@/store/themeStore';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useSyncStatus } from '@/offline';
 import { flushSyncQueue } from '@/offline/syncManager';
+import { TeamPermissionsScreen } from '@/features/settings/components/TeamPermissionsScreen';
 import {
   Sun, Moon, Monitor, Database, Shield, Bell, Cloud, RefreshCw,
-  Globe, CheckCircle2, AlertTriangle
+  Globe, CheckCircle2, AlertTriangle, Users
 } from 'lucide-react';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { language, toggleLanguage } = useLanguageStore();
   const { theme, setTheme } = useThemeStore();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   const { pendingCount, isOnline, lastSyncedAt, hasSyncErrors, refresh } = useSyncStatus();
 
+  const isOwnerOrAdmin = user?.role === 'FARM_OWNER' || user?.role === 'ADMIN';
+
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'notifications' | 'offline' | 'privacy'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'team' | 'notifications' | 'offline' | 'privacy'>('general');
 
   // Local state for settings mock settings
   const [privacyTelemetry, setPrivacyTelemetry] = useState(true);
@@ -71,13 +76,16 @@ export default function SettingsScreen() {
     <div className="max-w-4xl mx-auto space-y-6 sf-stagger">
       <div>
         <h1 className="text-xl font-bold text-foreground tracking-tight">{t('nav.settings', 'Settings')}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{t('settings.sync', 'Manage your application preferences, offline sync, and security.')}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{t('settings.sync', 'Manage your application preferences, team permissions, offline sync, and security.')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Navigation Sidebar */}
         <div className="md:col-span-1 space-y-1">
           <TabButton active={activeTab === 'general'} onClick={() => setActiveTab('general')} label={t('settings.theme', 'General & Theme')} icon={Sun} />
+          {isOwnerOrAdmin && (
+            <TabButton active={activeTab === 'team'} onClick={() => setActiveTab('team')} label={t('permissions.teamAndPermissions', 'Team & Permissions')} icon={Users} />
+          )}
           <TabButton active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} label={t('nav.notifications', 'Notifications')} icon={Bell} />
           <TabButton active={activeTab === 'offline'} onClick={() => setActiveTab('offline')} label={t('settings.sync', 'Offline Sync & Data')} icon={Cloud} />
           <TabButton active={activeTab === 'privacy'} onClick={() => setActiveTab('privacy')} label={t('nav.admin', 'Privacy & Security')} icon={Shield} />
@@ -85,6 +93,10 @@ export default function SettingsScreen() {
 
         {/* Settings Content Area */}
         <div className="md:col-span-3 space-y-6">
+          {activeTab === 'team' && isOwnerOrAdmin && (
+            <TeamPermissionsScreen />
+          )}
+
           {activeTab === 'general' && (
             <div className="sf-card p-5 space-y-6">
               <SectionHeader icon={Sun} title={t('settings.theme', 'Appearance & Preferences')} />
@@ -287,6 +299,7 @@ export default function SettingsScreen() {
     </div>
   );
 }
+
 
 // Sub-components
 

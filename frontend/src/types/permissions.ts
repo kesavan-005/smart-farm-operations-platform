@@ -84,3 +84,45 @@ export function hasPermissionOnFarm(
   if (!farmRole) return false;
   return hasPermission(farmRole.role, permission);
 }
+
+// Module-Level RBAC Types for Owner -> Manager permission management
+export type FarmModule =
+  | 'FARM_MANAGEMENT'
+  | 'OPERATIONS'
+  | 'MONITORING'
+  | 'INVENTORY'
+  | 'FINANCE'
+  | 'AI_ADVISORY'
+  | 'REPORTS'
+  | 'NOTIFICATIONS';
+
+export type ModuleAccessLevel = 'NO_ACCESS' | 'VIEW_ONLY' | 'FULL_ACCESS';
+
+export type SensitivePermission = 'INVENTORY_ADJUST';
+
+export interface FarmPermissionMatrix {
+  farmId: string;
+  role: string;
+  modules: Record<FarmModule, ModuleAccessLevel>;
+  sensitivePermissions: SensitivePermission[];
+}
+
+export interface ManagerPermissionSummary {
+  membershipId: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  role: string;
+  active: boolean;
+  moduleAccess: Record<FarmModule, ModuleAccessLevel>;
+  sensitivePermissions: SensitivePermission[];
+  grantedAt: string;
+}
+
+export interface UserSummary {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+}
+

@@ -68,6 +68,11 @@ export class SmartFarmDB extends Dexie {
     this.version(2).stores({
       weatherCache: 'farmId, updatedAt',
     });
+
+    // Version 3: Add fieldCode index to fields store for efficient code lookups
+    this.version(3).stores({
+      fields: 'id, farmId, fieldCode, status, updatedAt',
+    });
   }
 }
 

@@ -5,6 +5,8 @@ import com.smartfarm.features.activity.domain.Activity;
 import com.smartfarm.features.activity.domain.ActivityPriority;
 import com.smartfarm.features.activity.domain.ActivityStatus;
 import com.smartfarm.features.activity.domain.ActivityType;
+import com.smartfarm.features.activity.dto.ActivityAssigneesResponse;
+import com.smartfarm.features.activity.dto.ActivityAssigneesResponse.AssigneeSummary;
 import com.smartfarm.features.activity.dto.ActivityRequest;
 import com.smartfarm.features.activity.dto.ActivityResponse;
 import com.smartfarm.features.activity.mapper.ActivityMapper;
@@ -21,7 +23,10 @@ import com.smartfarm.features.farm.repository.FarmRepository;
 import com.smartfarm.features.field.domain.Field;
 import com.smartfarm.features.field.repository.FieldRepository;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +52,16 @@ public class ActivityService {
     private final ActivityMapper activityMapper;
     private final com.smartfarm.features.task.repository.TaskRepository taskRepository;
 
+    // Roles eligible to be assigned as workers (operational roles)
+    private static final Set<Role> WORKER_ELIGIBLE_ROLES = Set.of(
+            Role.FARM_MANAGER, Role.SUPERVISOR, Role.WORKER
+    );
+
+    // Roles eligible to supervise activities
+    private static final Set<Role> SUPERVISOR_ELIGIBLE_ROLES = Set.of(
+            Role.FARM_OWNER, Role.FARM_MANAGER, Role.SUPERVISOR
+    );
+
     private Integer calculateActivityProgress(UUID activityId) {
         long totalTasks = taskRepository.countByActivityIdAndDeletedFalse(activityId);
         if (totalTasks == 0) {
@@ -62,6 +77,74 @@ public class ActivityService {
             res.setProgress(calculateActivityProgress(activity.getId()));
         }
         return res;
+    }
+
+    /**
+     * Returns the eligible workers and supervisors for activity assignment,
+     * scoped to the given farm. Only active farm members with non-deleted
+     * user accounts are included.
+     */
+    @Transactional(readOnly = true)
+    public ActivityAssigneesResponse getActivityAssignees(UUID farmId) {
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
+
+        List<AssigneeSummary> workers = new ArrayList<>();
+        List<AssigneeSummary> supervisors = new ArrayList<>();
+        Set<UUID> addedSupervisorIds = new HashSet<>();
+
+        // 1. Add the farm owner as an eligible supervisor (if not soft-deleted)
+        User owner = farm.getOwner();
+        if (owner != null && owner.getDeletedAt() == null && owner.isActive()) {
+            supervisors.add(AssigneeSummary.builder()
+                    .id(owner.getId())
+                    .name(owner.getName())
+                    .role(Role.FARM_OWNER.name())
+                    .phone(owner.getPhone())
+                    .build());
+            addedSupervisorIds.add(owner.getId());
+        }
+
+        // 2. Query active farm memberships
+        List<UserFarmRole> memberships = userFarmRoleRepository.findByFarmIdAndActiveTrue(farmId);
+
+        for (UserFarmRole membership : memberships) {
+            User user = membership.getUser();
+
+            // Skip soft-deleted or inactive users
+            if (user == null || user.getDeletedAt() != null || !user.isActive()) {
+                continue;
+            }
+
+            Role farmRole = membership.getRole();
+            String displayRole = farmRole.name();
+
+            // Worker eligibility
+            if (WORKER_ELIGIBLE_ROLES.contains(farmRole)) {
+                workers.add(AssigneeSummary.builder()
+                        .id(user.getId())
+                        .name(user.getName())
+                        .role(displayRole)
+                        .phone(user.getPhone())
+                        .build());
+            }
+
+            // Supervisor eligibility
+            if (SUPERVISOR_ELIGIBLE_ROLES.contains(farmRole) && !addedSupervisorIds.contains(user.getId())) {
+                supervisors.add(AssigneeSummary.builder()
+                        .id(user.getId())
+                        .name(user.getName())
+                        .role(displayRole)
+                        .phone(user.getPhone())
+                        .build());
+                addedSupervisorIds.add(user.getId());
+            }
+        }
+
+        return ActivityAssigneesResponse.builder()
+                .workers(workers)
+                .supervisors(supervisors)
+                .build();
     }
 
     @Transactional
@@ -91,8 +174,7 @@ public class ActivityService {
         if (request.getPerformedBy() != null) {
             performedBy = userRepository.findById(request.getPerformedBy())
                     .orElseThrow(() -> new ResourceNotFoundException("Assigned user not found"));
-            // Validate that performer has access to the farm
-            validateUserFarmAccess(request.getFarmId(), performedBy.getId());
+            validateAssigneeIsActiveFarmMember(request.getFarmId(), performedBy);
         }
 
         User creator = userRepository.findById(userId)
@@ -102,6 +184,7 @@ public class ActivityService {
         if (request.getSupervisorId() != null) {
             supervisor = userRepository.findById(request.getSupervisorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Supervisor user not found"));
+            validateSupervisorFarmAccess(request.getFarmId(), supervisor);
         }
 
         Activity activity = activityMapper.toEntity(request);
@@ -268,13 +351,14 @@ public class ActivityService {
         if (request.getPerformedBy() != null) {
             performedBy = userRepository.findById(request.getPerformedBy())
                     .orElseThrow(() -> new ResourceNotFoundException("Assigned user not found"));
-            validateUserFarmAccess(request.getFarmId(), performedBy.getId());
+            validateAssigneeIsActiveFarmMember(request.getFarmId(), performedBy);
         }
 
         User supervisor = null;
         if (request.getSupervisorId() != null) {
             supervisor = userRepository.findById(request.getSupervisorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Supervisor user not found"));
+            validateSupervisorFarmAccess(request.getFarmId(), supervisor);
         }
 
         User updater = userRepository.findById(userId)
@@ -305,6 +389,8 @@ public class ActivityService {
         activityRepository.save(existing);
         log.info("Soft deleted activity: {}", id);
     }
+
+    // ======== Validation helpers ========
 
     private void validateFarmReadAccess(UUID farmId, UUID userId) {
         User user = userRepository.findById(userId)
@@ -349,6 +435,59 @@ public class ActivityService {
         }
     }
 
+    /**
+     * Validates that the given user is an active member of the farm (owner or active membership)
+     * and is not soft-deleted.
+     */
+    private void validateAssigneeIsActiveFarmMember(UUID farmId, User assignee) {
+        if (assignee.getDeletedAt() != null || !assignee.isActive()) {
+            throw new IllegalArgumentException("Assigned user account is inactive or deleted");
+        }
+
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
+
+        // Farm owner is always a valid assignee
+        if (farm.getOwner().getId().equals(assignee.getId())) {
+            return;
+        }
+
+        // Check active farm membership
+        boolean hasActiveMembership = userFarmRoleRepository
+                .existsByUserIdAndFarmIdAndActiveTrue(assignee.getId(), farmId);
+        if (!hasActiveMembership) {
+            throw new IllegalArgumentException("Assigned user is not an active member of this farm");
+        }
+    }
+
+    /**
+     * Validates that the given supervisor has farm access (owner or active membership)
+     * and is not soft-deleted.
+     */
+    private void validateSupervisorFarmAccess(UUID farmId, User supervisor) {
+        if (supervisor.getDeletedAt() != null || !supervisor.isActive()) {
+            throw new IllegalArgumentException("Supervisor user account is inactive or deleted");
+        }
+
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
+
+        // Farm owner can always supervise their own farm
+        if (farm.getOwner().getId().equals(supervisor.getId())) {
+            return;
+        }
+
+        // Check active farm membership
+        boolean hasActiveMembership = userFarmRoleRepository
+                .existsByUserIdAndFarmIdAndActiveTrue(supervisor.getId(), farmId);
+        if (!hasActiveMembership) {
+            throw new IllegalArgumentException("Supervisor is not an active member of this farm");
+        }
+    }
+
+    /**
+     * @deprecated Use validateAssigneeIsActiveFarmMember instead
+     */
     private void validateUserFarmAccess(UUID farmId, UUID userId) {
         Farm farm = farmRepository.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
@@ -363,3 +502,4 @@ public class ActivityService {
         }
     }
 }
+

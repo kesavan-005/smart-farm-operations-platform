@@ -5,9 +5,9 @@ import { useAuthStore } from '@/store/authStore';
 import { useFarmStore } from '@/store/farmStore';
 import { useFarms, useFarmContext } from '@/features/farms/api/farmsApi';
 import {
-  Tractor, Calendar, DollarSign, Activity, Leaf,
+  Tractor, Calendar, DollarSign, Leaf,
   PlusCircle, Bell,
-  CheckCircle2, HeartPulse, AlertOctagon, LayoutGrid
+  CheckCircle2, HeartPulse, AlertOctagon, LayoutGrid, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WeatherOverlay } from '@/features/weather/components/WeatherOverlay';
@@ -175,7 +175,7 @@ export default function DashboardScreen() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <ActionBtn icon={HeartPulse} label={t('dashboard.farmHealth', 'Farm Health')} onClick={() => navigate(`/farms/${farmId}/health`)} />
                   <ActionBtn icon={Leaf} label={t('dashboard.addCrop', 'Record Crop')} onClick={() => navigate(`/farms/${farmId}`)} />
-                  <ActionBtn icon={Activity} label={t('dashboard.logActivity', 'Log Activity')} />
+                  <ActionBtn icon={Sparkles} label={t('dashboard.askAi', 'Ask AI')} onClick={() => navigate('/ai-advisory')} />
                   <ActionBtn icon={DollarSign} label={t('dashboard.addExpense', 'Add Expense')} onClick={() => navigate('/expenses')} />
                 </div>
               </div>

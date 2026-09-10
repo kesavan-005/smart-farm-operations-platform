@@ -35,5 +35,10 @@
   "tamil": "தமிழ்",
   "theme": "தீம்",
   "themeDefault": "இயல்பு",
-  "themeHighContrast": "அதிக மாறுபாடு"
+  "themeHighContrast": "அதிக மாறுபாடு",
+  "fieldCode": "வயல் குறியீடு",
+  "copyCode": "குறியீட்டை நகலெடுக்கவும்",
+  "codeCopied": "குறியீடு நகலெடுக்கப்பட்டது",
+  "searchFieldCode": "வயல் குறியீட்டைத் தேடுங்கள்",
+  "fieldCodeReadOnly": "இந்த குறியீடு நிரந்தரமானது மற்றும் மாற்ற முடியாதது"
 }

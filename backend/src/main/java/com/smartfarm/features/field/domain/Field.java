@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -23,7 +24,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.locationtech.jts.geom.Polygon;
 
 @Entity
-@Table(name = "fields")
+@Table(
+    name = "fields",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_farm_field_code",
+            columnNames = {"farm_id", "field_code"}
+        )
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -39,7 +48,9 @@ public class Field {
     @JoinColumn(name = "farm_id", nullable = false)
     private Farm farm;
 
-    @Column(name = "field_code", unique = true, nullable = false, length = 50)
+    // Uniqueness is enforced at the table level via UNIQUE(farm_id, field_code).
+    // Field Code is permanent and immutable — the FieldMapper ignores this field on updates.
+    @Column(name = "field_code", nullable = false, length = 50)
     private String fieldCode;
 
     @Column(nullable = false, length = 100)

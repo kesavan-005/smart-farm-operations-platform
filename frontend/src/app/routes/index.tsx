@@ -29,6 +29,21 @@ const CropDetailPage = lazy(() => import('@/features/crops').then(m => ({ defaul
 const ActivityTimelinePage = lazy(() => import('./ComingSoonPage'));
 const AddActivityPage = lazy(() => import('./ComingSoonPage'));
 
+// Operations — standalone screens (Phase 1 sidebar)
+const TasksPage = lazy(() => import('@/features/tasks/components/TaskScreen'));
+const ActivitiesPage = lazy(() => import('@/features/activities/components/ActivityScreen'));
+const CalendarPage = lazy(() => import('./ComingSoonPage'));
+const TimelinePage = lazy(() => import('./ComingSoonPage'));
+
+// Monitoring — standalone pages (Phase 1 sidebar)
+const WeatherPage = lazy(() => import('./ComingSoonPage'));
+const SensorsPage = lazy(() => import('./ComingSoonPage'));
+const DevicesPage = lazy(() => import('./ComingSoonPage'));
+
+// AI & Automation placeholders (Phase 1 sidebar, no functionality)
+const AIAdvisoryPage = lazy(() => import('@/features/advisory/components/AdvisoryScreen'));
+const AutomationPage = lazy(() => import('./ComingSoonPage'));
+
 // Supporting pages (Phase 4+)
 const InventoryPage = lazy(() => import('@/features/inventory/components/InventoryScreen'));
 const LabourPage = lazy(() => import('./ComingSoonPage'));
@@ -52,6 +67,8 @@ const OfflinePage = lazy(() => import('./errors/OfflinePage'));
 
 // Admin pages (Phase 6)
 const AdminDashboardPage = lazy(() => import('./ComingSoonPage'));
+
+import { PermissionGuard } from '@/components/guards/PermissionGuard';
 
 // Loading fallback
 function PageLoader() {
@@ -120,46 +137,62 @@ export const router = createBrowserRouter([
       // Farm hierarchy
       {
         path: '/farms',
-        element: <SuspenseWrapper><FarmListPage /></SuspenseWrapper>,
+        element: <PermissionGuard module="FARM_MANAGEMENT"><SuspenseWrapper><FarmListPage /></SuspenseWrapper></PermissionGuard>,
       },
       {
         path: '/farms/:farmId',
-        element: <SuspenseWrapper><FarmDetailPage /></SuspenseWrapper>,
+        element: <PermissionGuard module="FARM_MANAGEMENT"><SuspenseWrapper><FarmDetailPage /></SuspenseWrapper></PermissionGuard>,
       },
       {
         path: '/farms/:farmId/map',
-        element: <SuspenseWrapper><FarmMapPage /></SuspenseWrapper>,
+        element: <PermissionGuard module="FARM_MANAGEMENT"><SuspenseWrapper><FarmMapPage /></SuspenseWrapper></PermissionGuard>,
       },
       {
         path: '/farms/:farmId/health',
-        element: <SuspenseWrapper><FarmHealthPage /></SuspenseWrapper>,
+        element: <PermissionGuard module="FARM_MANAGEMENT"><SuspenseWrapper><FarmHealthPage /></SuspenseWrapper></PermissionGuard>,
       },
       {
         path: '/farms/:farmId/fields/:fieldId',
-        element: <SuspenseWrapper><FieldDetailPage /></SuspenseWrapper>,
+        element: <PermissionGuard module="FARM_MANAGEMENT"><SuspenseWrapper><FieldDetailPage /></SuspenseWrapper></PermissionGuard>,
       },
       {
         path: '/farms/:farmId/fields/:fieldId/crops/:cropId',
-        element: <SuspenseWrapper><CropDetailPage /></SuspenseWrapper>,
+        element: <PermissionGuard module="FARM_MANAGEMENT"><SuspenseWrapper><CropDetailPage /></SuspenseWrapper></PermissionGuard>,
       },
       {
         path: '/farms/:farmId/fields/:fieldId/crops/:cropId/activities',
-        element: <SuspenseWrapper><ActivityTimelinePage /></SuspenseWrapper>,
+        element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><ActivityTimelinePage /></SuspenseWrapper></PermissionGuard>,
       },
 
+      // Operations — standalone module routes (Phase 1 sidebar)
+      { path: '/tasks', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><TasksPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/activities', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><ActivitiesPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/calendar', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><CalendarPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/timeline', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><TimelinePage /></SuspenseWrapper></PermissionGuard> },
+
+      // Monitoring — standalone module routes (Phase 1 sidebar)
+      { path: '/weather', element: <PermissionGuard module="MONITORING"><SuspenseWrapper><WeatherPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/sensors', element: <PermissionGuard module="MONITORING"><SuspenseWrapper><SensorsPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/devices', element: <PermissionGuard module="MONITORING"><SuspenseWrapper><DevicesPage /></SuspenseWrapper></PermissionGuard> },
+
+      // AI Advisory placeholder
+      { path: '/ai-advisory', element: <PermissionGuard module="AI_ADVISORY"><SuspenseWrapper><AIAdvisoryPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/automation', element: <SuspenseWrapper><AutomationPage /></SuspenseWrapper> },
+
       // Supporting modules
-      { path: '/inventory', element: <SuspenseWrapper><InventoryPage /></SuspenseWrapper> },
+      { path: '/inventory', element: <PermissionGuard module="INVENTORY"><SuspenseWrapper><InventoryPage /></SuspenseWrapper></PermissionGuard> },
       { path: '/labour', element: <SuspenseWrapper><LabourPage /></SuspenseWrapper> },
-      { path: '/expenses', element: <SuspenseWrapper><ExpensesPage /></SuspenseWrapper> },
-      { path: '/income', element: <SuspenseWrapper><IncomePage /></SuspenseWrapper> },
+      { path: '/expenses', element: <PermissionGuard module="FINANCE"><SuspenseWrapper><ExpensesPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/income', element: <PermissionGuard module="FINANCE"><SuspenseWrapper><IncomePage /></SuspenseWrapper></PermissionGuard> },
       { path: '/harvest', element: <SuspenseWrapper><HarvestPage /></SuspenseWrapper> },
 
       // Cross-cutting
-      { path: '/reports', element: <SuspenseWrapper><ReportsPage /></SuspenseWrapper> },
-      { path: '/notifications', element: <SuspenseWrapper><NotificationsPage /></SuspenseWrapper> },
+      { path: '/reports', element: <PermissionGuard module="REPORTS"><SuspenseWrapper><ReportsPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/notifications', element: <PermissionGuard module="NOTIFICATIONS"><SuspenseWrapper><NotificationsPage /></SuspenseWrapper></PermissionGuard> },
       { path: '/settings', element: <SuspenseWrapper><SettingsPage /></SuspenseWrapper> },
       { path: '/profile', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
       { path: '/help', element: <SuspenseWrapper><HelpPage /></SuspenseWrapper> },
+
 
       // Errors
       { path: '/401', element: <SuspenseWrapper><UnauthorizedPage /></SuspenseWrapper> },

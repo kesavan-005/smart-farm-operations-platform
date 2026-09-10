@@ -1,5 +1,6 @@
 package com.smartfarm.features.farm.dto.context;
 
+import com.smartfarm.features.weather.dto.WeatherResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,4 +20,5 @@ public class FarmContextResponse {
     private FinanceSummary financeSummary;
     private InventorySummary inventorySummary;
     private List<AttentionItem> attentionItems;
+    private WeatherResponse weather;
 }

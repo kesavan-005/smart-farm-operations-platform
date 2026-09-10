@@ -47,6 +47,16 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        log.warn("Method argument type mismatch: {}", ex.getMessage());
+        ApiError apiError = ApiError.builder()
+                .code("BAD_REQUEST")
+                .message("Invalid parameter type")
+                .build();
+        return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         ApiError apiError = ApiError.builder()
@@ -94,6 +104,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
+        log.error("AccessDeniedException thrown!", ex);
         ApiError apiError = ApiError.builder()
                 .code("ACCESS_DENIED")
                 .message(ex.getMessage())
@@ -101,12 +112,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(com.smartfarm.features.advisory.exception.AdvisoryGenerationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAdvisoryGenerationException(com.smartfarm.features.advisory.exception.AdvisoryGenerationException ex) {
+        log.error("Advisory generation failed: {}", ex.getMessage());
+        ApiError apiError = ApiError.builder()
+                .code("SERVICE_UNAVAILABLE")
+                .message("The AI advisory service is currently unavailable. Please try again later.")
+                .build();
+        return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleAllUncaughtException(Exception ex) {
         log.error("Unknown error occurred", ex);
         ApiError apiError = ApiError.builder()
                 .code("INTERNAL_SERVER_ERROR")
-                .message(ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred")
+                .message("An unexpected error occurred")
                 .build();
         return new ResponseEntity<>(ApiResponse.error(apiError), HttpStatus.INTERNAL_SERVER_ERROR);
     }

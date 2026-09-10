@@ -197,7 +197,7 @@ export default function TaskForm({
           >
             <option value="">{isTa ? '-- புலத்தைத் தேர்ந்தெடுக்கவும் --' : '-- Select Field --'}</option>
             {filteredFields.map(fd => (
-              <option key={fd.id} value={fd.id}>{fd.name}</option>
+              <option key={fd.id} value={fd.id}>{fd.fieldCode} — {fd.name}</option>
             ))}
           </select>
           {errors.fieldId && (

@@ -72,7 +72,7 @@ public class Farm {
     @Column(length = 100)
     private String district;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String state;
 
     @Column(length = 20)

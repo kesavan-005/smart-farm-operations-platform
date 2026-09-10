@@ -38,3 +38,17 @@ jwt:
   secret: ${JWT_SECRET:0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF}
   expiration-ms: 86400000 # 24 hours
   refresh-expiration-ms: 604800000 # 7 days
+
+smartfarm:
+  knowledge:
+    ingestion:
+      chunk-size: 1000
+      chunk-overlap: 150
+    retrieval:
+      # Max cosine distance for vector semantic search (0.0 = exact match, 1.0 = orthogonal)
+      max-distance: 0.50
+  ai:
+    llm:
+      enabled: true
+      model: gpt-4o-mini
+      temperature: 0.2

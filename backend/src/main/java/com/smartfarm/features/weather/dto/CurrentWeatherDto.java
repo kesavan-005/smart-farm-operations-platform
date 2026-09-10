@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CurrentWeatherDto {
+    private String time;
     private Double temperature;
     private Double apparentTemperature;
     private Integer humidity;

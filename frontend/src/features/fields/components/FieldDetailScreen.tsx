@@ -7,7 +7,7 @@ import CropForm from '@/features/crops/components/CropForm';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states/EmptyState';
 import { LoadingState } from '@/components/ui/states/LoadingState';
-import { Sparkles, Leaf, ArrowLeft, Plus, MapPin, Eye, Edit2, Trash2, Beaker, Map } from 'lucide-react';
+import { Sparkles, Leaf, ArrowLeft, Plus, MapPin, Eye, Edit2, Trash2, Beaker, Map, Copy, Check, Hash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Crop } from '@/types/domain';
 
@@ -20,10 +20,28 @@ export default function FieldDetailScreen() {
 
   const [cropView, setCropView] = useState<'list' | 'create' | 'edit'>('list');
   const [editingCrop, setEditingCrop] = useState<Crop | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Queries
   const { data: field, isLoading: isFieldLoading, error: fieldError } = useField(fieldId);
   const { data: crops = [], isLoading: isCropsLoading } = useCrops(fieldId);
+
+  const handleCopyFieldCode = async () => {
+    if (!field?.fieldCode) return;
+    try {
+      await navigator.clipboard.writeText(field.fieldCode);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = field.fieldCode;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+    toast({ title: isTa ? t('codeCopied') : t('codeCopied'), description: field.fieldCode });
+  };
 
   // Mutations
   const createCropMutation = useCreateCrop(fieldId);
@@ -116,8 +134,24 @@ export default function FieldDetailScreen() {
               <h1 className="text-xl font-bold text-foreground tracking-tight">
                 {isTa && field.nameTa ? field.nameTa : field.name}
               </h1>
-              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{field.fieldCode}</span>
+              {/* Field Code — permanent identifier, prominently displayed */}
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1.5 bg-muted border border-border rounded-lg px-2.5 py-1">
+                  <Hash className="w-3 h-3 text-primary" />
+                  <span className="font-mono text-xs font-bold text-foreground tracking-wider">{field.fieldCode}</span>
+                </div>
+                <button
+                  onClick={handleCopyFieldCode}
+                  title={isTa ? t('copyCode') : t('copyCode')}
+                  className="w-7 h-7 flex items-center justify-center rounded-md border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+                >
+                  {codeCopied
+                    ? <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    : <Copy className="w-3.5 h-3.5" />
+                  }
+                </button>
+              </div>
+              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                 {field.area && <span>• {field.area} {field.areaUnit}</span>}
                 <span className={`px-2 py-0.5 rounded-md font-medium uppercase tracking-wider text-[10px] border ${
                   field.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-muted text-muted-foreground border-border'

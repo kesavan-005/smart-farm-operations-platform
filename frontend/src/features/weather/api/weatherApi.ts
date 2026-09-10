@@ -4,6 +4,7 @@ import { db } from '@/offline/db';
 import type { ApiResponse } from '@/types/api';
 
 export interface CurrentWeather {
+  time?: string;
   temperature: number;
   apparentTemperature: number;
   humidity: number;

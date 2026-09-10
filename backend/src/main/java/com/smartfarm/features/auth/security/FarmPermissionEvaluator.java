@@ -1,10 +1,9 @@
 package com.smartfarm.features.auth.security;
 
-import com.smartfarm.features.auth.domain.Role;
-import com.smartfarm.features.auth.domain.UserFarmRole;
-import com.smartfarm.features.auth.repository.UserFarmRoleRepository;
+import com.smartfarm.features.auth.domain.FarmModule;
+import com.smartfarm.features.auth.domain.ModuleAccessLevel;
+import com.smartfarm.features.auth.domain.SensitivePermission;
 import java.io.Serializable;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.PermissionEvaluator;
@@ -15,50 +14,63 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FarmPermissionEvaluator implements PermissionEvaluator {
 
-    private final UserFarmRoleRepository userFarmRoleRepository;
+    private final FarmAuthorizationService farmAuthorizationService;
 
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
-        if ((authentication == null) || (targetDomainObject == null) || !(permission instanceof String)) {
+        if (authentication == null || targetDomainObject == null || !(permission instanceof String)) {
             return false;
         }
-        
-        UUID userId = (UUID) authentication.getPrincipal();
-        UUID farmId = (UUID) targetDomainObject;
-        String requiredPermission = (String) permission;
 
-        List<UserFarmRole> roles = userFarmRoleRepository.findByUserId(userId);
-        
-        return roles.stream()
-                .filter(r -> r.getFarmId().equals(farmId))
-                .anyMatch(r -> hasRolePermission(r.getRole(), requiredPermission));
+        if (!(authentication.getPrincipal() instanceof UUID userId) || !(targetDomainObject instanceof UUID farmId)) {
+            return false;
+        }
+
+        return evaluate(userId, farmId, (String) permission);
     }
 
     @Override
     public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType, Object permission) {
-        if ((authentication == null) || (targetType == null) || !(permission instanceof String)) {
+        if (authentication == null || targetId == null || !(permission instanceof String)) {
             return false;
         }
-        
-        UUID userId = (UUID) authentication.getPrincipal();
-        UUID farmId = UUID.fromString(targetId.toString());
-        String requiredPermission = (String) permission;
-        
-        List<UserFarmRole> roles = userFarmRoleRepository.findByUserId(userId);
-        
-        return roles.stream()
-                .filter(r -> r.getFarmId().equals(farmId))
-                .anyMatch(r -> hasRolePermission(r.getRole(), requiredPermission));
+
+        if (!(authentication.getPrincipal() instanceof UUID userId)) {
+            return false;
+        }
+
+        UUID farmId;
+        try {
+            farmId = UUID.fromString(targetId.toString());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+
+        return evaluate(userId, farmId, (String) permission);
     }
-    
-    private boolean hasRolePermission(Role role, String requiredPermission) {
-        if (role == Role.FARM_OWNER || role == Role.ADMIN) return true;
-        if (role == Role.FARM_MANAGER) {
-            return !requiredPermission.equals("DELETE_FARM") && !requiredPermission.equals("MANAGE_USERS");
+
+    private boolean evaluate(UUID userId, UUID farmId, String permissionStr) {
+        if (permissionStr.startsWith("SENSITIVE:")) {
+            String sensitiveName = permissionStr.substring("SENSITIVE:".length());
+            try {
+                SensitivePermission sensitivePermission = SensitivePermission.valueOf(sensitiveName);
+                return farmAuthorizationService.hasSensitivePermission(userId, farmId, sensitivePermission);
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
         }
-        if (role == Role.WORKER || role == Role.SUPERVISOR) {
-            return requiredPermission.equals("READ") || requiredPermission.equals("ADD_ACTIVITY");
+
+        if (permissionStr.contains(":")) {
+            String[] parts = permissionStr.split(":");
+            try {
+                FarmModule module = FarmModule.valueOf(parts[0]);
+                ModuleAccessLevel level = ModuleAccessLevel.valueOf(parts[1]);
+                return farmAuthorizationService.hasModuleAccess(userId, farmId, module, level);
+            } catch (IllegalArgumentException e) {
+                // continue to general access
+            }
         }
-        return false;
+
+        return farmAuthorizationService.hasFarmAccess(userId, farmId);
     }
 }

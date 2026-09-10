@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Loader2, Save, Map as MapIcon, AlertCircle, Leaf, Wheat } from 'lucide-react';
+import { MapPin, Loader2, Save, Map as MapIcon, AlertCircle, Leaf, Wheat, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { FarmBoundaryMap } from './FarmBoundaryMap';
-import { validateFarmBoundary } from '@/utils/geofenceUtils';
+import { validateFarmBoundary, checkPointInsideFarm } from '@/utils/geofenceUtils';
+import { reverseGeocode, type ReverseGeocodeResult } from '@/utils/reverseGeocode';
 
 export const farmSchema = z.object({
   name: z.string().min(1, 'Farm name is required').max(100),
@@ -17,10 +18,11 @@ export const farmSchema = z.object({
   totalArea: z.coerce.number().positive('Area must be a positive number').optional(),
   areaUnit: z.string().max(10).optional(),
   address: z.string().optional(),
-  village: z.string().min(1, 'Village is required').max(100),
-  taluk: z.string().min(1, 'Taluk is required').max(100),
-  district: z.string().min(1, 'District is required').max(100),
-  state: z.string().min(1, 'State is required').max(100),
+  // Administrative fields — auto-filled from reverse geocoding, manually editable
+  village: z.string().max(100).optional(),
+  taluk: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
   pincode: z.string().max(20).optional(),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
@@ -54,6 +56,17 @@ export default function FarmForm({ initialData, onSubmit, onCancel, isSubmitting
   );
   const [boundaryError, setBoundaryError] = useState<string | null>(null);
 
+  // --- Location state ---
+  /** GPS / pin-drop coordinates selected by user (NOT the centroid) */
+  const [selectedLoc, setSelectedLoc] = useState<{ lat: number; lng: number } | null>(null);
+  /** Reverse-geocoding result from Nominatim */
+  const [geocodeResult, setGeocodeResult] = useState<ReverseGeocodeResult | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  /** true = geocoder failed (offline or error) — show manual entry notice */
+  const [geocodeError, setGeocodeError] = useState(false);
+  /** Geofence check: selected GPS point vs drawn polygon */
+  const [locationOutsideBoundary, setLocationOutsideBoundary] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -65,10 +78,6 @@ export default function FarmForm({ initialData, onSubmit, onCancel, isSubmitting
     defaultValues: {
       status: 'active',
       areaUnit: 'ACRES',
-      state: 'Tamil Nadu',
-      village: 'Anaimalai',
-      taluk: 'Pollachi',
-      district: 'Coimbatore',
       soilType: 'Red Loamy Soil',
       ...initialData,
     },
@@ -93,7 +102,50 @@ export default function FarmForm({ initialData, onSubmit, onCancel, isSubmitting
       setValue('totalArea', Math.round(areaSqMeters * 100) / 100);
       setValue('areaUnit', 'SQ_METERS');
     }
+
+    // Re-run geofence check when boundary changes
+    if (selectedLoc && newBoundary) {
+      const inside = checkPointInsideFarm(selectedLoc.lat, selectedLoc.lng, newBoundary);
+      setLocationOutsideBoundary(!inside.inside);
+    } else {
+      setLocationOutsideBoundary(false);
+    }
   };
+
+  /**
+   * Called by FarmBoundaryMap when user picks a GPS location or drops a pin.
+   * Triggers reverse geocoding to auto-fill admin fields.
+   */
+  const handleLocationSelected = useCallback(async (lat: number, lng: number) => {
+    setSelectedLoc({ lat, lng });
+    setGeocodeError(false);
+    setIsGeocoding(true);
+
+    // Geofence check: is this point inside the drawn boundary?
+    if (boundary) {
+      const inside = checkPointInsideFarm(lat, lng, boundary);
+      setLocationOutsideBoundary(!inside.inside);
+    } else {
+      setLocationOutsideBoundary(false);
+    }
+
+    try {
+      const result = await reverseGeocode(lat, lng);
+      setGeocodeResult(result);
+      // Populate form fields
+      if (result.village) setValue('village', result.village);
+      if (result.taluk)   setValue('taluk',   result.taluk);
+      if (result.district) setValue('district', result.district);
+      if (result.state)   setValue('state',   result.state);
+      if (result.pincode) setValue('pincode', result.pincode);
+    } catch (_err) {
+      // Offline or geocoder error — let user fill manually
+      setGeocodeError(true);
+      setGeocodeResult(null);
+    } finally {
+      setIsGeocoding(false);
+    }
+  }, [boundary, setValue]);
 
   const onFormSubmit = (data: FarmFormData) => {
     const valResult = validateFarmBoundary(boundary);
@@ -128,13 +180,14 @@ export default function FarmForm({ initialData, onSubmit, onCancel, isSubmitting
       </FormSection>
 
       {/* Section 2: Farm Location & Boundary */}
-      <FormSection icon={MapIcon} title={isTa ? '📍 பண்ணை இருப்பிடம் & எல்லை' : '📍 Farm Location & Boundary'}>
+      <FormSection icon={MapIcon} title={isTa ? 'பண்ணை இருப்பிடம் & எல்லை' : '📍 Farm Location & Boundary'}>
         <div className="space-y-4">
           <FarmBoundaryMap
             boundary={boundary}
             latitude={currentLat}
             longitude={currentLng}
             onBoundaryChange={handleBoundaryChange}
+            onLocationSelected={handleLocationSelected}
             isTamil={isTa}
           />
 
@@ -156,7 +209,7 @@ export default function FarmForm({ initialData, onSubmit, onCancel, isSubmitting
                 className="h-9 bg-muted/50 font-mono text-muted-foreground cursor-not-allowed"
               />
             </FormField>
-            <FormField label={isTa ? 'தீர்க்கரேகை (தானியங்கி)' : 'Longitude (Auto)'}>
+            <FormField label={isTa ? 'தீர்கரேகை (தானியங்கி)' : 'Longitude (Auto)'}>
               <Input
                 type="number"
                 step="any"
@@ -189,24 +242,67 @@ export default function FarmForm({ initialData, onSubmit, onCancel, isSubmitting
         </div>
       </FormSection>
 
-      {/* Section 3: Location */}
+      {/* Section 3: Admin Location (auto-filled from reverse geocoding) */}
       <FormSection icon={MapPin} title={isTa ? '📍 இடம்' : '📍 Location'}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label={isTa ? 'கிராமம் *' : 'Village *'} error={errors.village?.message}>
-            <Input {...register('village')} placeholder={isTa ? 'எ.கா. மேலூர்' : 'e.g. Melur'} className="h-9 bg-background" />
-          </FormField>
-          <FormField label={isTa ? 'தாலுகா *' : 'Taluk *'} error={errors.taluk?.message}>
-            <Input {...register('taluk')} placeholder={isTa ? 'எ.கா. மதுரை தெற்கு' : 'e.g. Madurai South'} className="h-9 bg-background" />
-          </FormField>
-          <FormField label={isTa ? 'மாவட்டம் *' : 'District *'} error={errors.district?.message}>
-            <Input {...register('district')} placeholder={isTa ? 'எ.கா. மதுரை' : 'e.g. Madurai'} className="h-9 bg-background" />
-          </FormField>
-          <FormField label={isTa ? 'மாநிலம் *' : 'State *'} error={errors.state?.message}>
-            <Input {...register('state')} placeholder={isTa ? 'எ.கா. தமிழ்நாடு' : 'e.g. Tamil Nadu'} className="h-9 bg-background" />
-          </FormField>
-          <FormField label={isTa ? 'அஞ்சல் குறியீடு' : 'Pincode'}>
-            <Input {...register('pincode')} placeholder="e.g. 625001" className="h-9 bg-background" />
-          </FormField>
+        <div className="space-y-4">
+
+          {/* Geocoding status */}
+          {isGeocoding && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>{isTa ? 'இருப்பிட விவரங்கள் பெறுகிறது...' : 'Detecting location details...'}</span>
+            </div>
+          )}
+
+          {/* Success: geocode result */}
+          {geocodeResult && !isGeocoding && (
+            <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{isTa ? 'இருப்பிடம் கண்டறியப்பட்டது' : '✓ Location detected — fields auto-filled below'}</span>
+            </div>
+          )}
+
+          {/* Offline/error fallback */}
+          {geocodeError && !isGeocoding && (
+            <div className="p-3 text-xs bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>
+                {isTa
+                  ? 'இணையம் இல்லாமல் இருப்பிட விவரங்கள் கிடைக்கவில்லை. கீழே நேரடியாக தடவும்.'
+                  : 'Location details unavailable offline. Please fill in the fields below manually.'}
+              </span>
+            </div>
+          )}
+
+          {/* Geofence warning */}
+          {locationOutsideBoundary && selectedLoc && boundary && (
+            <div className="p-3 text-xs bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                {isTa
+                  ? 'தேர்ந்தெடுத்த இடம் பண்ணை எல்லைக்கு வெளியே உள்ளது. இடத்தை சரிப்படுத்தவும் அல்லது எல்லையை மறுவரையவும்.'
+                  : '⚠️ Selected location is outside the farm boundary. Adjust the location or redraw the boundary.'}
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label={isTa ? 'கிராமம்' : 'Village'} error={errors.village?.message}>
+              <Input {...register('village')} placeholder={isTa ? 'எ.கா. மேலூர்' : 'e.g. Melur'} className="h-9 bg-background" />
+            </FormField>
+            <FormField label={isTa ? 'தாலுகா' : 'Taluk'} error={errors.taluk?.message}>
+              <Input {...register('taluk')} placeholder={isTa ? 'எ.கா. மதுரை தெற்கு' : 'e.g. Madurai South'} className="h-9 bg-background" />
+            </FormField>
+            <FormField label={isTa ? 'மாவட்டம்' : 'District'} error={errors.district?.message}>
+              <Input {...register('district')} placeholder={isTa ? 'எ.கா. மதுரை' : 'e.g. Madurai'} className="h-9 bg-background" />
+            </FormField>
+            <FormField label={isTa ? 'மாநிலம்' : 'State'} error={errors.state?.message}>
+              <Input {...register('state')} placeholder={isTa ? 'எ.கா. தமிழ்நாடு' : 'e.g. Tamil Nadu'} className="h-9 bg-background" />
+            </FormField>
+            <FormField label={isTa ? 'அஞ்சல் குறியீடு' : 'Pincode'}>
+              <Input {...register('pincode')} placeholder="e.g. 625001" className="h-9 bg-background" />
+            </FormField>
+          </div>
         </div>
       </FormSection>
 

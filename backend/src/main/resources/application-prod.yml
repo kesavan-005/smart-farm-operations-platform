@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/smartfarm}
+    username: ${SPRING_DATASOURCE_USERNAME:smartfarm}
+    password: ${SPRING_DATASOURCE_PASSWORD:smartfarm_dev}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+# ─── Spring AI ────────────────────────────────────────────────────────────────
+# Embedding provider: OpenAI text-embedding-3-small (dimension = 1536)
+# Set OPENAI_API_KEY in environment — never hardcode.
+spring.ai:
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    embedding:
+      options:
+        model: text-embedding-3-small
+
+  vectorstore:
+    pgvector:
+      # Must match the embedding dimension of text-embedding-3-small
+      dimensions: 1536
+      # Cosine distance is the standard choice for OpenAI embeddings
+      distance-type: COSINE_DISTANCE
+      # Let Spring AI create/validate the table on startup; Flyway already created the extension
+      initialize-schema: true
+      # Table used by Spring AI PgVectorStore (do NOT share with business tables)
+      table-name: vector_store
+      # Index type — HNSW is supported by pgvector 0.5+ (we have 0.8.6)
+      index-type: HNSW
+
+logging:
+  level:
+    com.smartfarm: INFO
+    org.springframework.ai: INFO

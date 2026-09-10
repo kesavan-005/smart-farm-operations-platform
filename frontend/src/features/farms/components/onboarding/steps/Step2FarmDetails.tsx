@@ -17,7 +17,7 @@ export function Step2FarmDetails() {
       district: '',
       taluk: '',
       village: '',
-      state: 'Tamil Nadu',
+      state: '', // Never pre-fill with a hardcoded region — user must provide actual farm state
       area: 0,
       soilType: '',
       irrigationSource: ''

@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Save, Calendar, FileText, Loader2, ArrowLeft } from 'lucide-react';
@@ -38,6 +38,13 @@ export const activitySchema = z.object({
 
 export type ActivityFormData = z.infer<typeof activitySchema>;
 
+interface AssigneeSummary {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+}
+
 interface ActivityFormProps {
   initialData?: Partial<ActivityFormData & { id: string }>;
   farms: Farm[];
@@ -56,9 +63,10 @@ export default function ActivityForm({
   const { t, i18n } = useTranslation(['activities', 'common']);
   const isTa = i18n.language === 'ta';
 
-  // Load all users to populate the Assigned Worker dropdown
-  const [users, setUsers] = useState<any[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  // Farm-scoped assignee lists (workers and supervisors)
+  const [workers, setWorkers] = useState<AssigneeSummary[]>([]);
+  const [supervisors, setSupervisors] = useState<AssigneeSummary[]>([]);
+  const [loadingAssignees, setLoadingAssignees] = useState(false);
 
   // Load all fields and crops locally from IndexedDB
   const [allFields, setAllFields] = useState<Field[]>([]);
@@ -76,25 +84,6 @@ export default function ActivityForm({
       }
     }
     loadDbData();
-  }, []);
-
-  useEffect(() => {
-    async function fetchUsers() {
-      try {
-        setLoadingUsers(true);
-        const res = await apiClient.get('/users');
-        if (Array.isArray(res.data)) {
-          setUsers(res.data);
-        } else if (res.data && Array.isArray(res.data.data)) {
-          setUsers(res.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to load users list:', err);
-      } finally {
-        setLoadingUsers(false);
-      }
-    }
-    fetchUsers();
   }, []);
 
   // Format OffsetDateTime timestamps to HTML datetime-local input formats
@@ -154,13 +143,45 @@ export default function ActivityForm({
     ? allCrops.filter(c => c.fieldId === watchedFieldId)
     : [];
 
+  // Fetch farm-scoped assignees when the selected farm changes
+  const fetchAssignees = useCallback(async (farmId: string) => {
+    if (!farmId) {
+      setWorkers([]);
+      setSupervisors([]);
+      return;
+    }
+    try {
+      setLoadingAssignees(true);
+      const res = await apiClient.get(`/farms/${farmId}/activity-assignees`);
+      const data = res.data?.data || res.data;
+      setWorkers(Array.isArray(data?.workers) ? data.workers : []);
+      setSupervisors(Array.isArray(data?.supervisors) ? data.supervisors : []);
+    } catch (err) {
+      console.error('Failed to load farm assignees:', err);
+      setWorkers([]);
+      setSupervisors([]);
+    } finally {
+      setLoadingAssignees(false);
+    }
+  }, []);
 
+  useEffect(() => {
+    if (watchedFarmId) {
+      fetchAssignees(watchedFarmId);
+    } else {
+      setWorkers([]);
+      setSupervisors([]);
+    }
+  }, [watchedFarmId, fetchAssignees]);
 
   // Reset dependent fields if parent selection changes
   useEffect(() => {
     if (watchedFarmId && initialData?.farmId !== watchedFarmId) {
       setValue('fieldId', '');
       setValue('cropId', '');
+      // Clear stale user selections when farm changes
+      setValue('performedBy', '');
+      setValue('supervisorId', '');
     }
   }, [watchedFarmId, setValue]);
 
@@ -254,7 +275,7 @@ export default function ActivityForm({
             >
               <option value="">{isTa ? '-- நிலத்தைத் தேர்ந்தெடுக்கவும் --' : '-- Select Field --'}</option>
               {filteredFields.map(f => (
-                <option key={f.id} value={f.id}>{f.name}</option>
+                <option key={f.id} value={f.id}>{f.fieldCode} — {f.name}</option>
               ))}
             </select>
             {errors.fieldId && (
@@ -326,35 +347,36 @@ export default function ActivityForm({
             </select>
           </div>
 
-          {/* Assigned Performer */}
+          {/* Assigned Worker — farm-scoped */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-muted-foreground uppercase">{t('assigned_to')}</label>
             <select
               {...register('performedBy')}
               className="w-full h-9.5 rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none"
-              disabled={loadingUsers}
+              disabled={loadingAssignees || !watchedFarmId}
             >
               <option value="">{isTa ? '-- தொழிலாளியைத் தேர்ந்தெடுக்கவும் --' : '-- Select Worker --'}</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.name} ({u.phone})</option>
+              {workers.map(u => (
+                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
               ))}
             </select>
           </div>
 
-          {/* Supervisor */}
+          {/* Supervisor — farm-scoped */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-muted-foreground uppercase">{isTa ? 'கண்காணிப்பாளர்' : 'Supervisor'}</label>
             <select
               {...register('supervisorId')}
               className="w-full h-9.5 rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none"
-              disabled={loadingUsers}
+              disabled={loadingAssignees || !watchedFarmId}
             >
               <option value="">{isTa ? '-- கண்காணிப்பாளரைத் தேர்ந்தெடுக்கவும் --' : '-- Select Supervisor --'}</option>
-              {users.map(u => (
+              {supervisors.map(u => (
                 <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
               ))}
             </select>
           </div>
+
 
           {/* Scheduled Date */}
           <div className="space-y-1.5">

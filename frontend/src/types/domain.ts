@@ -21,7 +21,8 @@ export interface Farm extends BaseEntity {
   village?: string;
   taluk?: string;
   district?: string;
-  state: string;
+  /** Auto-filled from reverse geocoding; optional on the client side */
+  state?: string;
   pincode?: string;
   ownerUserId: string;
   soilType?: string;

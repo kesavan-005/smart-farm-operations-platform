@@ -7,9 +7,12 @@ import com.smartfarm.features.activity.domain.ActivityStatus;
 import com.smartfarm.features.activity.domain.ActivityType;
 import com.smartfarm.features.activity.repository.ActivityRepository;
 import com.smartfarm.features.auth.domain.User;
+import com.smartfarm.features.auth.security.FarmAuthorizationService;
 import com.smartfarm.features.crop.domain.Crop;
 import com.smartfarm.features.crop.repository.CropRepository;
 import com.smartfarm.features.farm.domain.Farm;
+import com.smartfarm.features.weather.dto.WeatherResponse;
+import com.smartfarm.features.weather.service.WeatherService;
 
 import com.smartfarm.features.farm.dto.context.FarmContextResponse;
 import com.smartfarm.features.farm.repository.FarmRepository;
@@ -57,13 +60,17 @@ class FarmContextServiceTest {
     @Mock
     private InventoryItemRepository inventoryItemRepository;
 
-    @InjectMocks
+    private FarmAuthorizationService farmAuthorizationService;
+    private WeatherService weatherService;
     private FarmContextService farmContextService;
 
     private UUID farmId;
     private UUID userId;
     private User owner;
     private Farm farm;
+    private boolean isAuthorized;
+    private WeatherResponse mockWeatherResponse;
+    private RuntimeException weatherException;
 
     @BeforeEach
     void setUp() {
@@ -79,6 +86,33 @@ class FarmContextServiceTest {
         farm.setName("Test Farm");
         farm.setTotalArea(BigDecimal.valueOf(100));
         farm.setAreaUnit("Acres");
+        
+        isAuthorized = true;
+        mockWeatherResponse = null;
+        weatherException = null;
+        
+        farmAuthorizationService = new FarmAuthorizationService(null, null, null, null, null) {
+            @Override
+            public boolean hasFarmAccess(UUID uid, UUID fid) {
+                return isAuthorized;
+            }
+        };
+
+        weatherService = new WeatherService(null, null) {
+            @Override
+            public WeatherResponse getWeatherForAuthorizedFarm(Farm f) {
+                if (weatherException != null) {
+                    throw weatherException;
+                }
+                return mockWeatherResponse;
+            }
+        };
+        
+        farmContextService = new FarmContextService(
+            farmRepository, fieldRepository, cropRepository, activityRepository, 
+            financialTransactionRepository, inventoryItemRepository, 
+            farmAuthorizationService, weatherService
+        );
     }
 
     @Test
@@ -128,6 +162,8 @@ class FarmContextServiceTest {
         item.setMinimumStock(BigDecimal.valueOf(20)); // Low stock
         when(inventoryItemRepository.findByFarmIdAndDeletedFalse(farmId)).thenReturn(List.of(item));
 
+        mockWeatherResponse = WeatherResponse.builder().build();
+
         FarmContextResponse response = farmContextService.getFarmContext(farmId, userId);
 
         assertNotNull(response);
@@ -140,6 +176,7 @@ class FarmContextServiceTest {
         assertEquals(BigDecimal.valueOf(1000), response.getFinanceSummary().getCurrentMonthExpenses());
         assertEquals(1, response.getInventorySummary().getTotalUniqueItems());
         assertEquals(1, response.getInventorySummary().getLowStockCount());
+        assertNotNull(response.getWeather());
         
         // Attention items: 1 overdue task, 1 low stock
         assertEquals(2, response.getAttentionItems().size());
@@ -149,13 +186,33 @@ class FarmContextServiceTest {
 
     @Test
     void getFarmContext_unauthorized_throwsException() {
-        User otherUser = new User();
-        otherUser.setId(UUID.randomUUID());
-        farm.setOwner(otherUser);
-        
-        when(farmRepository.findById(farmId)).thenReturn(Optional.of(farm));
-        
+        isAuthorized = false;
         assertThrows(AccessDeniedException.class, () -> farmContextService.getFarmContext(farmId, userId));
+    }
+
+    @Test
+    void getFarmContext_delegatedUser_returnsContextWithWeather() {
+        // userId is not the owner
+        UUID delegatedUserId = UUID.randomUUID();
+        when(farmRepository.findById(farmId)).thenReturn(Optional.of(farm));
+
+        mockWeatherResponse = WeatherResponse.builder().build();
+
+        FarmContextResponse response = farmContextService.getFarmContext(farmId, delegatedUserId);
+        
+        assertNotNull(response);
+        assertNotNull(response.getWeather());
+    }
+
+    @Test
+    void getFarmContext_weatherFails_returnsContextWithNullWeather() {
+        when(farmRepository.findById(farmId)).thenReturn(Optional.of(farm));
+        weatherException = new RuntimeException("Weather API error");
+
+        FarmContextResponse response = farmContextService.getFarmContext(farmId, userId);
+        
+        assertNotNull(response);
+        assertNull(response.getWeather());
     }
 
     @Test

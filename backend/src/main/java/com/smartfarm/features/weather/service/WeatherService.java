@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -35,15 +36,17 @@ public class WeatherService {
     private final OpenMeteoClient openMeteoClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${weather.cache.ttl-minutes:45}")
+    private long cacheTtlMinutes = 45;
+
     // Optional RedisTemplate (null if RedisAutoConfiguration is excluded in dev profile)
     @Autowired(required = false)
     private StringRedisTemplate redisTemplate;
 
     // In-memory fallback cache for development when Redis is disabled
-    private static final Map<String, LocalCacheEntry> localCache = new ConcurrentHashMap<>();
-    private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(45);
+    private final Map<String, LocalCacheEntry> localCache = new ConcurrentHashMap<>();
 
-    private static class LocalCacheEntry {
+    private class LocalCacheEntry {
         final WeatherResponse data;
         final long timestamp;
 
@@ -53,7 +56,7 @@ public class WeatherService {
         }
 
         boolean isExpired() {
-            return System.currentTimeMillis() - timestamp > CACHE_TTL_MS;
+            return System.currentTimeMillis() - timestamp > TimeUnit.MINUTES.toMillis(cacheTtlMinutes);
         }
     }
 
@@ -67,13 +70,21 @@ public class WeatherService {
             throw new AccessDeniedException("Access denied to this farm");
         }
 
+        return getWeatherForAuthorizedFarm(farm);
+    }
+
+    public WeatherResponse getWeatherForAuthorizedFarm(Farm farm) {
         // 3. Validate Coordinates
         Double lat = farm.getLatitude() != null ? farm.getLatitude().doubleValue() : null;
         Double lng = farm.getLongitude() != null ? farm.getLongitude().doubleValue() : null;
         if (lat == null || lng == null) {
             throw new LocationUnavailableException("Farm location coordinates are not set.");
         }
+        if (lat < -90.0 || lat > 90.0 || lng < -180.0 || lng > 180.0) {
+            throw new LocationUnavailableException("Farm location coordinates are invalid: lat=" + lat + ", lng=" + lng);
+        }
 
+        UUID farmId = farm.getId();
         String cacheKey = "weather:farm:" + farmId.toString();
 
         // 4. Try reading cache (Redis first, then local in-memory fallback)
@@ -83,9 +94,16 @@ public class WeatherService {
             return cachedResponse;
         }
 
-        // 5. Call Open-Meteo API
+        // 5. Call Open-Meteo API with diagnostic logging
         try {
+            log.info("Fetching fresh weather from Open-Meteo for farmId={}, farmName='{}', latitude={}, longitude={}",
+                    farmId, farm.getName(), lat, lng);
             OpenMeteoResponseDto omResponse = openMeteoClient.fetchForecast(lat, lng);
+            if (omResponse != null) {
+                log.info("Open-Meteo response received for farmId={}: timezone={}, latitude={}, longitude={}",
+                        farmId, omResponse.getTimezone(), omResponse.getLatitude(), omResponse.getLongitude());
+            }
+
             WeatherResponse freshResponse = buildWeatherResponse(farm, omResponse);
 
             // Store in Cache
@@ -130,7 +148,7 @@ public class WeatherService {
         if (redisTemplate != null) {
             try {
                 String json = objectMapper.writeValueAsString(response);
-                redisTemplate.opsForValue().set(cacheKey, json, 45, TimeUnit.MINUTES);
+                redisTemplate.opsForValue().set(cacheKey, json, cacheTtlMinutes, TimeUnit.MINUTES);
             } catch (Exception e) {
                 log.warn("Redis write failed: {}", e.getMessage());
             }
@@ -144,6 +162,27 @@ public class WeatherService {
         List<DailyWeatherDto> dailyList = new ArrayList<>();
         List<String> alerts = new ArrayList<>();
 
+        // Map explicit Current Weather
+        OpenMeteoResponseDto.CurrentData currentData = om.getCurrent();
+        if (currentData != null) {
+            Integer precipProb = currentData.getPrecipitationProbability();
+            if (precipProb == null && om.getHourly() != null) {
+                precipProb = getSafeInt(om.getHourly().getPrecipitationProbability(), 0);
+            }
+
+            currentWeather = CurrentWeatherDto.builder()
+                    .time(currentData.getTime())
+                    .temperature(currentData.getTemperature2m() != null ? currentData.getTemperature2m() : getSafeDouble(om.getHourly() != null ? om.getHourly().getTemperature2m() : null, 0))
+                    .apparentTemperature(currentData.getApparentTemperature() != null ? currentData.getApparentTemperature() : getSafeDouble(om.getHourly() != null ? om.getHourly().getApparentTemperature() : null, 0))
+                    .humidity(currentData.getRelativeHumidity2m() != null ? currentData.getRelativeHumidity2m() : getSafeInt(om.getHourly() != null ? om.getHourly().getRelativeHumidity2m() : null, 0))
+                    .precipitationProbability(precipProb != null ? precipProb : 0)
+                    .rain(currentData.getRain() != null ? currentData.getRain() : getSafeDouble(om.getHourly() != null ? om.getHourly().getRain() : null, 0))
+                    .windSpeed(currentData.getWindSpeed10m() != null ? currentData.getWindSpeed10m() : 0.0)
+                    .weatherCode(currentData.getWeatherCode() != null ? currentData.getWeatherCode() : getSafeInt(om.getHourly() != null ? om.getHourly().getWeatherCode() : null, 0))
+                    .build();
+        }
+
+        // Map Hourly Forecast
         if (om.getHourly() != null && om.getHourly().getTime() != null && !om.getHourly().getTime().isEmpty()) {
             int count = Math.min(24, om.getHourly().getTime().size());
             for (int i = 0; i < count; i++) {
@@ -159,16 +198,19 @@ public class WeatherService {
                 hourlyList.add(h);
             }
 
-            // Current weather is index 0
-            currentWeather = CurrentWeatherDto.builder()
-                    .temperature(getSafeDouble(om.getHourly().getTemperature2m(), 0))
-                    .apparentTemperature(getSafeDouble(om.getHourly().getApparentTemperature(), 0))
-                    .humidity(getSafeInt(om.getHourly().getRelativeHumidity2m(), 0))
-                    .precipitationProbability(getSafeInt(om.getHourly().getPrecipitationProbability(), 0))
-                    .rain(getSafeDouble(om.getHourly().getRain(), 0))
-                    .windSpeed(om.getDaily() != null ? getSafeDouble(om.getDaily().getWindSpeed10mMax(), 0) : 0.0)
-                    .weatherCode(getSafeInt(om.getHourly().getWeatherCode(), 0))
-                    .build();
+            // Fallback for current weather if explicit current block was completely absent from response
+            if (currentWeather == null) {
+                currentWeather = CurrentWeatherDto.builder()
+                        .time(om.getHourly().getTime().get(0))
+                        .temperature(getSafeDouble(om.getHourly().getTemperature2m(), 0))
+                        .apparentTemperature(getSafeDouble(om.getHourly().getApparentTemperature(), 0))
+                        .humidity(getSafeInt(om.getHourly().getRelativeHumidity2m(), 0))
+                        .precipitationProbability(getSafeInt(om.getHourly().getPrecipitationProbability(), 0))
+                        .rain(getSafeDouble(om.getHourly().getRain(), 0))
+                        .windSpeed(0.0)
+                        .weatherCode(getSafeInt(om.getHourly().getWeatherCode(), 0))
+                        .build();
+            }
         }
 
         if (om.getDaily() != null && om.getDaily().getTime() != null && !om.getDaily().getTime().isEmpty()) {

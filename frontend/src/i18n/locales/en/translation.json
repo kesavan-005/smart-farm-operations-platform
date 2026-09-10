@@ -117,8 +117,8 @@
       "email": "Email Address",
       "emailPlaceholder": "ramesh@example.com",
       "role": "Role",
-      "farmer": "Farmer",
-      "admin": "Administrator",
+      "farmer": "Owner",
+      "admin": "Admin",
       "password": "Password",
       "passwordPlaceholder": "Enter password",
       "confirmPassword": "Confirm Password",
@@ -543,5 +543,34 @@
     "offline": "Showing last available weather.",
     "offlineUnavailable": "Weather unavailable offline.",
     "retry": "Retry"
+  },
+
+  "permissions": {
+    "teamAndPermissions": "Team & Permissions",
+    "noAccess": "No Access",
+    "viewOnly": "View Only",
+    "fullAccess": "Full Access",
+    "accessRestrictedTitle": "Access Restricted",
+    "accessRestrictedDesc": "You don't have permission to access this section. Please contact your Farm Owner.",
+    "backToDashboard": "Back to Dashboard",
+    "farmOwner": "Farm Owner",
+    "farmManager": "Farm Manager",
+    "addManager": "Add Manager",
+    "editPermissions": "Edit Permissions",
+    "removeManager": "Remove Manager",
+    "confirmRemoveManager": "Are you sure you want to remove access for this manager?",
+    "inventoryAdjustPermission": "Allow Inventory Stock Adjustment",
+    "preset": "Presets",
+    "customPreset": "Custom Configuration",
+    "operationsManagerPreset": "Operations Manager",
+    "farmSupervisorPreset": "Farm Supervisor",
+    "fullManagerPreset": "Full Access Manager",
+    "selectManager": "Select Manager",
+    "searchManagerPlaceholder": "Search by name or email...",
+    "moduleName": "Module",
+    "accessLevel": "Access Level",
+    "savePermissions": "Save Permissions",
+    "saving": "Saving..."
   }
 }
+

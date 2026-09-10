@@ -9,6 +9,14 @@ import com.smartfarm.features.farm.dto.FarmRequest;
 import com.smartfarm.features.farm.dto.FarmResponse;
 import com.smartfarm.features.farm.mapper.FarmMapper;
 import com.smartfarm.features.farm.repository.FarmRepository;
+import com.smartfarm.features.auth.repository.UserFarmRoleRepository;
+import com.smartfarm.features.auth.security.FarmAuthorizationService;
+import com.smartfarm.features.auth.domain.FarmModule;
+import com.smartfarm.features.auth.domain.ModuleAccessLevel;
+import com.smartfarm.features.auth.domain.UserFarmRole;
+import jakarta.persistence.criteria.Predicate;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -30,6 +38,8 @@ public class FarmService {
     private final UserRepository userRepository;
     private final FarmMapper farmMapper;
     private final GeofenceService geofenceService;
+    private final FarmAuthorizationService farmAuthorizationService;
+    private final UserFarmRoleRepository userFarmRoleRepository;
 
     @Transactional
     public FarmResponse createFarm(FarmRequest request, UUID ownerId) {
@@ -59,10 +69,12 @@ public class FarmService {
             }
         }
 
-        // Fallback default coordinates if lat/lng are missing so weather is always available
+        // Reject farm creation if coordinates are still missing after centroid attempt.
+        // DO NOT assign hardcoded fallback coordinates — incorrect coordinates produce incorrect weather.
         if (farm.getLatitude() == null || farm.getLongitude() == null) {
-            farm.setLatitude(BigDecimal.valueOf(10.6609));
-            farm.setLongitude(BigDecimal.valueOf(77.0048));
+            throw new IllegalArgumentException(
+                "Farm coordinates are required. Please draw a farm boundary on the map or use GPS to set the farm location."
+            );
         }
 
         farm = farmRepository.save(farm);
@@ -71,21 +83,32 @@ public class FarmService {
     }
 
     @Transactional(readOnly = true)
-    public FarmResponse getFarmById(UUID id, UUID ownerId) {
+    public FarmResponse getFarmById(UUID id, UUID userId) {
         Farm farm = farmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
         
-        if (!farm.getOwner().getId().equals(ownerId)) {
+        if (!farmAuthorizationService.hasFarmAccess(userId, id)) {
             throw new AccessDeniedException("Access denied to this farm");
         }
         return farmMapper.toResponse(farm);
     }
 
     @Transactional(readOnly = true)
-    public Page<FarmResponse> getFarms(UUID ownerId, String search, String status, Pageable pageable) {
-        Specification<Farm> spec = Specification.where((root, query, cb) -> 
-            cb.equal(root.get("owner").get("id"), ownerId)
-        );
+    public Page<FarmResponse> getFarms(UUID userId, String search, String status, Pageable pageable) {
+        List<UUID> managedFarmIds = userFarmRoleRepository.findByUserIdAndActiveTrue(userId)
+                .stream()
+                .map(UserFarmRole::getFarmId)
+                .collect(Collectors.toList());
+
+        Specification<Farm> spec = Specification.where((root, query, cb) -> {
+            Predicate ownerPredicate = cb.equal(root.get("owner").get("id"), userId);
+            if (managedFarmIds.isEmpty()) {
+                return ownerPredicate;
+            } else {
+                Predicate managerPredicate = root.get("id").in(managedFarmIds);
+                return cb.or(ownerPredicate, managerPredicate);
+            }
+        });
 
         if (status != null && !status.trim().isEmpty()) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
@@ -107,12 +130,12 @@ public class FarmService {
     }
 
     @Transactional
-    public FarmResponse updateFarm(UUID id, FarmRequest request, UUID ownerId) {
+    public FarmResponse updateFarm(UUID id, FarmRequest request, UUID userId) {
         Farm farm = farmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
         
-        if (!farm.getOwner().getId().equals(ownerId)) {
-            throw new AccessDeniedException("Access denied to this farm");
+        if (!farmAuthorizationService.hasModuleAccess(userId, id, FarmModule.FARM_MANAGEMENT, ModuleAccessLevel.FULL_ACCESS)) {
+            throw new AccessDeniedException("Access denied to update this farm");
         }
 
         if (request.getBoundary() != null) {
@@ -135,12 +158,12 @@ public class FarmService {
     }
 
     @Transactional
-    public void deleteFarm(UUID id, UUID ownerId) {
+    public void deleteFarm(UUID id, UUID userId) {
         Farm farm = farmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm not found"));
         
-        if (!farm.getOwner().getId().equals(ownerId)) {
-            throw new AccessDeniedException("Access denied to this farm");
+        if (!farmAuthorizationService.isOwner(userId, id)) {
+            throw new AccessDeniedException("Only the farm owner can delete the farm");
         }
 
         farm.setDeleted(true);

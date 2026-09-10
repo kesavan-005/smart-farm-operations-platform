@@ -117,7 +117,7 @@
       "email": "மின்னஞ்சல் முகவரி",
       "emailPlaceholder": "ramesh@example.com",
       "role": "பங்கு",
-      "farmer": "விவசாயி",
+      "farmer": "உரிமையாளர்",
       "admin": "நிர்வாகி",
       "password": "கடவுச்சொல்",
       "passwordPlaceholder": "கடவுச்சொல்லை உள்ளிடவும்",
@@ -543,5 +543,34 @@
     "offline": "கடைசியாகக் கிடைத்த வானிலை காட்சியளிக்கிறது.",
     "offlineUnavailable": "ஆஃப்லைனில் வானிலை தரவு இல்லை.",
     "retry": "மீண்டும் முயற்சி செய்"
+  },
+
+  "permissions": {
+    "teamAndPermissions": "குழு மற்றும் அனுமதிகள்",
+    "noAccess": "அணுகல் இல்லை",
+    "viewOnly": "பார்வை மட்டும்",
+    "fullAccess": "முழு அணுகல்",
+    "accessRestrictedTitle": "அணுகல் கட்டுப்படுத்தப்பட்டுள்ளது",
+    "accessRestrictedDesc": "இந்த பகுதிக்கு செல்ல உங்களுக்கு அனுமதி இல்லை. உங்கள் பண்ணை உரிமையாளரை தொடர்பு கொள்ளவும்.",
+    "backToDashboard": "டாஷ்போர்டுக்கு திரும்பு",
+    "farmOwner": "பண்ணை உரிமையாளர்",
+    "farmManager": "பண்ணை மேலாளர்",
+    "addManager": "மேலாளரைச் சேர்",
+    "editPermissions": "அனுமதிகளைத் திருத்து",
+    "removeManager": "மேலாளரை நீக்கு",
+    "confirmRemoveManager": "இந்த மேலாளரின் அணுகலை நிச்சயமாக நீக்க விரும்புகிறீர்களா?",
+    "inventoryAdjustPermission": "சரக்கு இருப்பு சரிசெய்தலை அனுமதி",
+    "preset": "முன்அமைப்புகள்",
+    "customPreset": "தனிப்பயன் அமைப்பு",
+    "operationsManagerPreset": "செயல்பாடுகள் மேலாளர்",
+    "farmSupervisorPreset": "பண்ணை மேற்பார்வையாளர்",
+    "fullManagerPreset": "முழு அணுகல் மேலாளர்",
+    "selectManager": "மேலாளரைத் தேர்ந்தெடுக்கவும்",
+    "searchManagerPlaceholder": "பெயர் அல்லது மின்னஞ்சல் மூலம் தேடுக...",
+    "moduleName": "தொகுதி",
+    "accessLevel": "அணுகல் நிலை",
+    "savePermissions": "அனுமதிகளைச் சேமி",
+    "saving": "சேமிக்கிறது..."
   }
 }
+

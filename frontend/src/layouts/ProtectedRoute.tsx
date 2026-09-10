@@ -1,23 +1,30 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { usePermissionStore } from '@/store/permissionStore';
 import { ShieldAlert } from 'lucide-react';
+import type { FarmModule, ModuleAccessLevel } from '@/types/permissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
   requiredPermission?: string;
+  requiredModule?: FarmModule;
+  requiredLevel?: ModuleAccessLevel;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   allowedRoles,
   requiredPermission,
+  requiredModule,
+  requiredLevel,
 }) => {
   const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const hasPermission = useAuthStore((state) => state.hasPermission);
+  const { hasModuleAccess } = usePermissionStore();
 
   if (!isAuthenticated || !user) {
     return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />;
@@ -68,6 +75,30 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
+  }
+
+  if (requiredModule && requiredLevel) {
+    if (!hasModuleAccess(requiredModule, requiredLevel)) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100 p-6">
+          <div className="bg-slate-800 border border-slate-700/80 rounded-2xl p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
+            <div className="w-16 h-16 bg-red-950/80 border border-red-800/60 rounded-full flex items-center justify-center mx-auto text-red-400">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-100">Module Access Denied</h2>
+            <p className="text-sm text-slate-400">
+              Missing <code className="bg-slate-900 px-2 py-1 rounded text-amber-300">{requiredLevel}</code> access to module <code className="bg-slate-900 px-2 py-1 rounded text-amber-300">{requiredModule}</code>
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="mt-4 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium text-sm rounded-xl transition-all"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      );
+    }
   }
 
   return <>{children}</>;

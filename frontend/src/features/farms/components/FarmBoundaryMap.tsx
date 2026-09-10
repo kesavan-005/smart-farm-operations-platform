@@ -43,6 +43,8 @@ export interface FarmBoundaryMapProps {
   latitude?: number;
   longitude?: number;
   onBoundaryChange?: (boundary: GeoJSON.Polygon | null, centerLat?: number, centerLng?: number, areaSqMeters?: number) => void;
+  /** Fired when user picks a location via GPS or map pin-drop — used for reverse geocoding */
+  onLocationSelected?: (lat: number, lng: number) => void;
   readOnly?: boolean;
   isTamil?: boolean;
 }
@@ -63,17 +65,23 @@ function MapViewSetter({ center, zoom }: { center?: [number, number]; zoom?: num
   return null;
 }
 
-// Click listener inside MapContainer for manual point creation
+// Click listener inside MapContainer for manual point creation or pin-drop
 function MapClickListener({
   isDrawing,
+  isPinDropMode,
   onAddPoint,
+  onPinDrop,
 }: {
   isDrawing: boolean;
+  isPinDropMode: boolean;
   onAddPoint: (lat: number, lng: number) => void;
+  onPinDrop: (lat: number, lng: number) => void;
 }) {
   useMapEvents({
     click(e) {
-      if (isDrawing) {
+      if (isPinDropMode) {
+        onPinDrop(e.latlng.lat, e.latlng.lng);
+      } else if (isDrawing) {
         onAddPoint(e.latlng.lat, e.latlng.lng);
       }
     },
@@ -82,7 +90,7 @@ function MapClickListener({
 }
 
 export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapProps>(function FarmBoundaryMap(
-  { boundary, latitude, longitude, onBoundaryChange, readOnly = false, isTamil = false },
+  { boundary, latitude, longitude, onBoundaryChange, onLocationSelected, readOnly = false, isTamil = false },
   ref
 ) {
   // State for polygon vertices in Leaflet format: [lat, lng][]
@@ -95,6 +103,8 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
   });
 
   const [isDrawing, setIsDrawing] = useState(false);
+  /** Pin-drop mode: next map click sets the location pin (not a polygon vertex) */
+  const [isPinDropMode, setIsPinDropMode] = useState(false);
   const [currentLoc, setCurrentLoc] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(() => {
     if (latitude && longitude) return [latitude, longitude];
@@ -175,16 +185,28 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
   const handleLocateUser = async () => {
     setLocationError(null);
     setIsLocating(true);
+    setIsPinDropMode(false);
     try {
       const loc = await getCurrentLocation();
       const coords: [number, number] = [loc.latitude, loc.longitude];
       setCurrentLoc(coords);
       setMapCenter(coords);
+      // Notify parent so it can trigger reverse geocoding
+      onLocationSelected?.(loc.latitude, loc.longitude);
     } catch (err: any) {
       setLocationError(err.message || 'Failed to fetch current location');
     } finally {
       setIsLocating(false);
     }
+  };
+
+  /** Pin-drop: user clicked on the map to select a location */
+  const handlePinDrop = (lat: number, lng: number) => {
+    const coords: [number, number] = [lat, lng];
+    setCurrentLoc(coords);
+    setMapCenter(coords);
+    setIsPinDropMode(false); // exit pin-drop mode after one click
+    onLocationSelected?.(lat, lng);
   };
 
   useImperativeHandle(ref, () => ({
@@ -233,7 +255,7 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
               type="button"
               variant={isDrawing ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setIsDrawing(!isDrawing)}
+              onClick={() => { setIsDrawing(!isDrawing); setIsPinDropMode(false); }}
               className="gap-1.5 h-8 text-xs font-medium"
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -261,7 +283,21 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
                   : 'Getting Location...'
                 : isTamil
                 ? 'என் இருப்பிடம்'
-                : 'Use My Current Location'}
+                : 'Use My Location'}
+            </Button>
+
+            {/* Pin-drop mode toggle */}
+            <Button
+              type="button"
+              variant={isPinDropMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => { setIsPinDropMode(!isPinDropMode); setIsDrawing(false); }}
+              className="gap-1.5 h-8 text-xs font-medium"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              {isPinDropMode
+                ? isTamil ? 'வரைபடத்தில் தொடவும்...' : 'Click on Map...'
+                : isTamil ? 'வரைபடத்தில் தேர்ந்தெடு' : 'Select on Map'}
             </Button>
 
             {points.length > 0 && (
@@ -334,6 +370,17 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
         </div>
       )}
 
+      {/* Pin-Drop Mode Instructions Notice */}
+      {isPinDropMode && (
+        <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-700 dark:text-blue-400 font-medium flex items-center justify-between sf-animate-in">
+          <span>
+            {isTamil
+              ? '📍 பண்ணையின் இருப்பிடத்தை குறிக்க வரைபடத்தை தொடவும்.'
+              : '📍 Click anywhere on the map to pin your farm location.'}
+          </span>
+        </div>
+      )}
+
       {/* Leaflet Map Frame */}
       <div className="relative w-full h-[360px] rounded-xl overflow-hidden border border-border shadow-sm z-0">
         <MapContainer
@@ -349,7 +396,12 @@ export const FarmBoundaryMap = forwardRef<FarmBoundaryMapRef, FarmBoundaryMapPro
           />
 
           <MapViewSetter center={mapCenter} />
-          <MapClickListener isDrawing={isDrawing} onAddPoint={handleAddPoint} />
+          <MapClickListener
+            isDrawing={isDrawing}
+            isPinDropMode={isPinDropMode}
+            onAddPoint={handleAddPoint}
+            onPinDrop={handlePinDrop}
+          />
 
           {/* Current user location marker */}
           {currentLoc && <Marker position={currentLoc} icon={currentLocationIcon} />}
