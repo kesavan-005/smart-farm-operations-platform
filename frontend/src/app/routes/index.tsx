@@ -31,12 +31,12 @@ const AddActivityPage = lazy(() => import('./ComingSoonPage'));
 
 // Operations — standalone screens (Phase 1 sidebar)
 const TasksPage = lazy(() => import('@/features/tasks/components/TaskScreen'));
-const ActivitiesPage = lazy(() => import('@/features/activities/components/ActivityScreen'));
+const ActivityScreen = lazy(() => import('@/features/activities/components/ActivityScreen'));
+const TimelineScreen = lazy(() => import('@/features/activities/components/TimelineScreen'));
 const CalendarPage = lazy(() => import('./ComingSoonPage'));
-const TimelinePage = lazy(() => import('./ComingSoonPage'));
 
 // Monitoring — standalone pages (Phase 1 sidebar)
-const WeatherPage = lazy(() => import('./ComingSoonPage'));
+const WeatherPage = lazy(() => import('@/features/weather/components/WeatherScreen'));
 const SensorsPage = lazy(() => import('./ComingSoonPage'));
 const DevicesPage = lazy(() => import('./ComingSoonPage'));
 
@@ -165,9 +165,11 @@ export const router = createBrowserRouter([
 
       // Operations — standalone module routes (Phase 1 sidebar)
       { path: '/tasks', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><TasksPage /></SuspenseWrapper></PermissionGuard> },
-      { path: '/activities', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><ActivitiesPage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/activities', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><ActivityScreen /></SuspenseWrapper></PermissionGuard> },
       { path: '/calendar', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><CalendarPage /></SuspenseWrapper></PermissionGuard> },
-      { path: '/timeline', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><TimelinePage /></SuspenseWrapper></PermissionGuard> },
+      { path: '/timeline', element: <PermissionGuard module="OPERATIONS"><SuspenseWrapper><TimelineScreen /></SuspenseWrapper></PermissionGuard> },
+      
+      // Resource management
 
       // Monitoring — standalone module routes (Phase 1 sidebar)
       { path: '/weather', element: <PermissionGuard module="MONITORING"><SuspenseWrapper><WeatherPage /></SuspenseWrapper></PermissionGuard> },

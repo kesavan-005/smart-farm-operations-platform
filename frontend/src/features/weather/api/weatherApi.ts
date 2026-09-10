@@ -102,6 +102,7 @@ export function useFarmWeather(farmId?: string | null) {
     queryFn: () => fetchFarmWeather(farmId!),
     enabled: !!farmId,
     staleTime: 1000 * 60 * 15, // 15 minutes client stale time
+    refetchInterval: 1000 * 60 * 5, // 5 minutes periodic auto-refresh
     retry: (failureCount, error: any) => {
       // Don't retry if farm is 404 Not Found, location is unavailable, or offline without cache
       if (error?.response?.status === 404 || error?.code === 'RESOURCE_NOT_FOUND' || error?.response?.data?.error?.code === 'WEATHER_LOCATION_UNAVAILABLE' || error?.message === 'WEATHER_OFFLINE_UNAVAILABLE') {

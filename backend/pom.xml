@@ -127,6 +127,12 @@
             <version>${mapstruct.version}</version>
         </dependency>
 
+        <!-- WebSocket for Real-Time Timeline -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- Utilities -->
         <dependency>
             <groupId>org.projectlombok</groupId>

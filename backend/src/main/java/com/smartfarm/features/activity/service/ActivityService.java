@@ -11,6 +11,8 @@ import com.smartfarm.features.activity.dto.ActivityRequest;
 import com.smartfarm.features.activity.dto.ActivityResponse;
 import com.smartfarm.features.activity.mapper.ActivityMapper;
 import com.smartfarm.features.activity.repository.ActivityRepository;
+import com.smartfarm.features.activity.event.ActivityEventPublisher;
+import com.smartfarm.features.activity.event.ActivityWebSocketEvent;
 import com.smartfarm.features.auth.domain.Role;
 import com.smartfarm.features.auth.domain.User;
 import com.smartfarm.features.auth.domain.UserFarmRole;
@@ -51,6 +53,7 @@ public class ActivityService {
     private final UserFarmRoleRepository userFarmRoleRepository;
     private final ActivityMapper activityMapper;
     private final com.smartfarm.features.task.repository.TaskRepository taskRepository;
+    private final ActivityEventPublisher activityEventPublisher;
 
     // Roles eligible to be assigned as workers (operational roles)
     private static final Set<Role> WORKER_ELIGIBLE_ROLES = Set.of(
@@ -204,7 +207,14 @@ public class ActivityService {
 
         activity = activityRepository.save(activity);
         log.info("Created activity '{}' for farm: {}", activity.getTitle(), farm.getId());
-        return mapToResponseWithProgress(activity);
+        
+        ActivityResponse response = mapToResponseWithProgress(activity);
+        activityEventPublisher.publishEvent(ActivityWebSocketEvent.builder()
+                .eventType(ActivityWebSocketEvent.EventType.CREATED)
+                .activity(response)
+                .build());
+                
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -374,7 +384,14 @@ public class ActivityService {
 
         existing = activityRepository.save(existing);
         log.info("Updated activity: {}", id);
-        return mapToResponseWithProgress(existing);
+        
+        ActivityResponse response = mapToResponseWithProgress(existing);
+        activityEventPublisher.publishEvent(ActivityWebSocketEvent.builder()
+                .eventType(ActivityWebSocketEvent.EventType.UPDATED)
+                .activity(response)
+                .build());
+                
+        return response;
     }
 
     @Transactional
@@ -388,6 +405,12 @@ public class ActivityService {
         existing.setDeletedAt(OffsetDateTime.now());
         activityRepository.save(existing);
         log.info("Soft deleted activity: {}", id);
+        
+        activityEventPublisher.publishEvent(ActivityWebSocketEvent.builder()
+                .eventType(ActivityWebSocketEvent.EventType.DELETED)
+                .activityId(id)
+                .farmId(existing.getFarm().getId())
+                .build());
     }
 
     // ======== Validation helpers ========
