@@ -1,0 +1,32 @@
+spring:
+  # Datasource overridden by @DynamicPropertySource in PgVectorStoreIntegrationTest
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+  # Disable Redis for tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+  # Spring AI — disable OpenAI auto-configuration in test profile
+  # (NoopEmbeddingModel is registered by @TestConfiguration)
+  ai:
+    openai:
+      api-key: "test-not-used"
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        table-name: vector_store_test
+        dimensions: 1
+        distance-type: COSINE_DISTANCE
+
+logging:
+  level:
+    com.smartfarm: WARN
+    org.springframework.ai: WARN

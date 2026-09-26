@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="35" fill="#059669"/>
+  <g transform="translate(96, 96)">
+    <!-- Leaf shape -->
+    <path d="M0,-42.24 C38.016000000000005,-38.016000000000005 44.352000000000004,-6.336 33.792,14.783999999999999
+             C23.232000000000003,31.68 8.448,42.24 0,42.24
+             C-8.448,42.24 -23.232000000000003,31.68 -33.792,14.783999999999999
+             C-44.352000000000004,-6.336 -38.016000000000005,-38.016000000000005 0,-42.24 Z"
+          fill="white" opacity="0.95"/>
+    <!-- Center vein -->
+    <line x1="0" y1="-23.232000000000003" x2="0" y2="25.344" stroke="#059669" stroke-width="3.4559999999999995" stroke-linecap="round"/>
+    <!-- Side veins -->
+    <line x1="0" y1="-6.336" x2="16.0512" y2="-17.7408" stroke="#059669" stroke-width="2.496" stroke-linecap="round"/>
+    <line x1="0" y1="-6.336" x2="-16.0512" y2="-17.7408" stroke="#059669" stroke-width="2.496" stroke-linecap="round"/>
+    <line x1="0" y1="7.6032" x2="16.896" y2="-0.8448000000000001" stroke="#059669" stroke-width="2.496" stroke-linecap="round"/>
+    <line x1="0" y1="7.6032" x2="-16.896" y2="-0.8448000000000001" stroke="#059669" stroke-width="2.496" stroke-linecap="round"/>
+  </g>
+  <!-- Brand text -->
+  <text x="96" y="168.96" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="12.48" opacity="0.9">SmartFarm</text>
+</svg>

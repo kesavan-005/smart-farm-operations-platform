@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: Smart Farm Auth API
+  version: 1.0.0
+  description: Authentication and Authorization endpoints for the Smart Farm Platform.
+
+servers:
+  - url: /api/v1/auth
+    description: Auth routing base
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties:
+            type: string
+
+    ApiResponse:
+      type: object
+      properties:
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            correlationId:
+              type: string
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+        name:
+          type: string
+        preferredLanguage:
+          type: string
+          enum: [en, ta]
+
+    UserRole:
+      type: string
+      enum: [OWNER, MANAGER, WORKER]
+
+    FarmRole:
+      type: object
+      properties:
+        farmId:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        # refresh_token is set via httpOnly cookie, not in body
+
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+                roles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FarmRole'
+                tokens:
+                  $ref: '#/components/schemas/AuthTokens'
+
+paths:
+  /otp/request:
+    post:
+      summary: Request OTP
+      description: Sends an OTP to the given phone number. Rate-limited to 3 requests per 10 mins.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: OTP requested successfully (or masked generic success if phone not found, for security)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '429':
+          description: Too Many Requests
+
+  /otp/verify:
+    post:
+      summary: Verify OTP
+      description: Verifies the OTP and logs the user in, returning an access token and setting a refresh token cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone:
+                  type: string
+                code:
+                  type: string
+      responses:
+        '200':
+          description: Successfully verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid or expired OTP
+
+  /login:
+    post:
+      summary: Login via Password
+      description: Secondary login method for users with a set password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, password]
+              properties:
+                phone:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+
+  /register:
+    post:
+      summary: Register new user
+      description: Creates a new user. The phone number must have been verified via OTP in the request session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, name, otpCode, preferredLanguage]
+              properties:
+                phone:
+                  type: string
+                name:
+                  type: string
+                otpCode:
+                  type: string
+                password:
+                  type: string
+                preferredLanguage:
+                  type: string
+                  enum: [en, ta]
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error
+        '409':
+          description: Phone number already exists
+
+  /refresh:
+    post:
+      summary: Refresh Access Token
+      description: Issues a new access token and rotates the refresh token cookie using the existing refresh token cookie.
+      responses:
+        '200':
+          description: Successfully refreshed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+        '401':
+          description: Invalid or expired refresh token
+
+  /logout:
+    post:
+      summary: Logout
+      description: Invalidates the current refresh token and clears the cookie.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /me:
+    get:
+      summary: Get current user profile
+      description: Returns the user profile and roles based on the provided access token.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+                          roles:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/FarmRole'
+        '401':
+          description: Unauthorized

@@ -1,0 +1,26 @@
+{
+  "title": "AI Advisory",
+  "subtitle": "Get expert agricultural advice based on your farm context and current weather.",
+  "advisingFor": "Advising for: ",
+  "entireFarm": "Entire farm",
+  "selectField": "Select Field",
+  "emptyTitle": "Ask AI Advisory about your farm",
+  "emptySubtitle": "Ask a question about your crops, soil, irrigation, pests, or weather response.",
+  "example1": "Why are my leaves turning yellow?",
+  "example2": "How often should I irrigate this crop?",
+  "example3": "What should I check for pest damage?",
+  "missingFarmTitle": "Please select a farm before using AI Advisory.",
+  "goToFarms": "Go to Farms",
+  "thinking": "AI Advisory is thinking...",
+  "inputPlaceholder": "Ask a question about your farm...",
+  "sources": "Knowledge sources used for this advisory",
+  "weatherConsidered": "Weather context was considered for this advisory.",
+  "errors": {
+    "validation": "Please check your question and try again.",
+    "unauthorized": "Your session has expired. Please sign in again.",
+    "forbidden": "You do not have access to this farm.",
+    "notFound": "Farm or field information could not be found.",
+    "unavailable": "AI Advisory is temporarily unavailable. Please try again later.",
+    "default": "Unable to generate an advisory right now. Please try again."
+  }
+}
