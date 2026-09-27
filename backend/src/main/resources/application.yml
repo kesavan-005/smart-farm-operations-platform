@@ -47,8 +47,19 @@ smartfarm:
     retrieval:
       # Max cosine distance for vector semantic search (0.0 = exact match, 1.0 = orthogonal)
       max-distance: 0.50
+    seed:
+      enabled: ${KNOWLEDGE_SEED_ENABLED:false}
+      location: ${KNOWLEDGE_SEED_LOCATION:classpath:knowledge-seed/}
+      manifest-file: manifest.json
   ai:
     llm:
       enabled: true
       model: gpt-4o-mini
       temperature: 0.2
+
+# MinIO Object Storage
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin123}
+  bucket-name: ${MINIO_BUCKET_NAME:smartfarm-knowledge}

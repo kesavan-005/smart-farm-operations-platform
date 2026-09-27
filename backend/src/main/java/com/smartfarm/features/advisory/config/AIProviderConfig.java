@@ -2,15 +2,12 @@ package com.smartfarm.features.advisory.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.transformers.TransformersEmbeddingModel;
 
@@ -30,39 +27,17 @@ public class AIProviderConfig {
         return embeddingModel;
     }
 
-
-
     @Bean
-    @ConditionalOnProperty(name = "AI_PROVIDER", havingValue = "openai", matchIfMissing = true)
-    public ChatModel openAiChatModel(@Value("${OPENAI_API_KEY:}") String apiKey) {
-        log.info("Initializing OpenAI ChatModel...");
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("OPENAI_API_KEY is not set or blank. Advisory requests will fail.");
-            apiKey = "dummy-key"; // Prevent startup failure, let it fail on request
-        }
-        OpenAiApi openAiApi = OpenAiApi.builder().apiKey(apiKey).build();
-        OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model("gpt-4o-mini")
-                .temperature(0.7)
-                .build();
-        return OpenAiChatModel.builder()
-                .openAiApi(openAiApi)
-                .defaultOptions(options)
-                .build();
-    }
-
-    @Bean
-    @ConditionalOnProperty(name = "AI_PROVIDER", havingValue = "gemini")
     public ChatModel geminiChatModel(
             @Value("${GEMINI_API_KEY:${GOOGLE_API_KEY:}}") String apiKey,
             @Value("${smartfarm.ai.llm.model:gemini-3.6-flash}") String modelName) {
-        log.info("Initializing Gemini ChatModel via OpenAI compatibility layer...");
+        log.info("Initializing Google Gemini ChatModel via OpenAI compatibility layer...");
         if (apiKey == null || apiKey.isBlank()) {
-            log.warn("GEMINI_API_KEY = MISSING. Advisory requests will fail.");
-            apiKey = "dummy-key";
-        } else {
-            log.info("GEMINI_API_KEY = PRESENT");
+            throw new IllegalStateException(
+                    "Google Gemini API key is missing. Please configure GEMINI_API_KEY or GOOGLE_API_KEY in your environment or configuration. "
+                    + "Smart Farm Advisory requires Google Gemini as the LLM provider.");
         }
+        log.info("GEMINI_API_KEY = PRESENT");
         
         // Ensure model name is valid (fall back to gemini-3.6-flash if set to outdated default)
         String effectiveModel = (modelName == null || modelName.isBlank() || modelName.equals("gpt-4o-mini") || modelName.equals("gemini-3.5-flash"))

@@ -49,6 +49,10 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
       return;
     }
 
+    if (get().currentFarmId === farmId && !get().error && (get().role !== null || get().isLoading)) {
+      return;
+    }
+
     set({ isLoading: true, error: null, currentFarmId: farmId });
     try {
       const response = await apiClient.get<FarmPermissionMatrix>(`/farms/${farmId}/permissions/me`);

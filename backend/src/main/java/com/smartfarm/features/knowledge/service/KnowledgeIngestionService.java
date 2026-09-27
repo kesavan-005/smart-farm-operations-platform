@@ -84,6 +84,10 @@ public class KnowledgeIngestionService {
                 .publishedDate(request.getPublishedDate())
                 .lastVerifiedAt(request.getLastVerifiedAt())
                 .sourceUrl(request.getSourceUrl())
+                .originalFilename(request.getOriginalFilename())
+                .contentType(request.getContentType())
+                .fileSizeBytes(request.getFileSizeBytes())
+                .storagePath(request.getStoragePath())
                 .status(request.getStatus() != null ? request.getStatus() : DocumentStatus.DRAFT)
                 .metadata(request.getMetadata())
                 .build();
@@ -183,10 +187,14 @@ public class KnowledgeIngestionService {
 
     private void deleteDocumentAndVectors(KnowledgeDocument doc) {
         PgVectorStore vectorStore = vectorStoreProvider.getIfAvailable();
-        if (vectorStore != null) {
+        if (vectorStore != null && doc.getChunks() != null && !doc.getChunks().isEmpty()) {
             try {
-                // Delete vectors associated with this document ID from PgVectorStore if present
-                vectorStore.delete(List.of(doc.getId().toString()));
+                // In vector_store, the primary key ID is chunk.getId().toString()
+                List<String> chunkIds = doc.getChunks().stream()
+                        .map(chunk -> chunk.getId().toString())
+                        .toList();
+                vectorStore.delete(chunkIds);
+                log.info("Deleted {} vectors from PgVectorStore for document id='{}'", chunkIds.size(), doc.getId());
             } catch (Exception e) {
                 log.warn("Could not delete existing vectors for document id='{}': {}", doc.getId(), e.getMessage());
             }

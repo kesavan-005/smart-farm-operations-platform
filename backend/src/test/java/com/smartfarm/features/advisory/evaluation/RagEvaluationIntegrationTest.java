@@ -61,7 +61,7 @@ import com.smartfarm.features.advisory.service.ContextAssembler;
     "smartfarm.knowledge.ingestion.chunk-overlap=0",
     "spring.ai.vectorstore.pgvector.initialize-schema=true",
     "spring.ai.vectorstore.pgvector.table-name=vector_store",
-    "spring.ai.vectorstore.pgvector.dimensions=1536",
+    "spring.ai.vectorstore.pgvector.dimensions=384",
     "spring.ai.vectorstore.pgvector.distance-type=COSINE_DISTANCE",
     "spring.ai.vectorstore.pgvector.index-type=HNSW",
     // We set max-distance to a known threshold to evaluate if the system uses it correctly
@@ -70,8 +70,8 @@ import com.smartfarm.features.advisory.service.ContextAssembler;
 @DisplayName("Phase 7A - RAG Evaluation Integration Test")
 class RagEvaluationIntegrationTest {
 
-    // For evaluation, we use 1536 dimensions to match the DB schema, but only mathematically craft the first 3.
-    static final int DIM = 1536;
+    // For evaluation, we use 384 dimensions to match the DB schema, but only mathematically craft the first 3.
+    static final int DIM = 384;
 
     static float[] createVector(float v0, float v1, float v2) {
         float[] v = new float[DIM];
@@ -183,11 +183,6 @@ class RagEvaluationIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Clear previous data
-        jdbcTemplate.execute("DELETE FROM vector_store");
-        jdbcTemplate.execute("DELETE FROM knowledge_chunks");
-        jdbcTemplate.execute("DELETE FROM knowledge_documents");
-
         jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS vector");
         // Clear previous eval data
         jdbcTemplate.execute("DELETE FROM vector_store WHERE metadata->>'title' LIKE 'Eval%'");

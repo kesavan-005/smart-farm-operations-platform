@@ -66,7 +66,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { toggleLanguage, language } = useLanguageStore();
   const { user, clearSession } = useAuthStore();
   const { theme, setTheme, resolved } = useThemeStore();
-  const { loadFarmPermissions, clearPermissions, canAccess } = usePermissionStore();
+  const loadFarmPermissions = usePermissionStore(s => s.loadFarmPermissions);
+  const clearPermissions = usePermissionStore(s => s.clearPermissions);
+  const canAccess = usePermissionStore(s => s.canAccess);
 
   const { data: farms = [] } = useFarms();
   const { activeFarmId, setActiveFarmId, initializeActiveFarm } = useFarmStore();

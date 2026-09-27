@@ -10,6 +10,7 @@ import {
 import { useFarms } from '@/features/farms/api/farmsApi';
 import { useFields } from '@/features/fields/api/fieldsApi';
 import { useProfile, useMyFarmRoles } from '@/features/auth/api/profileApi';
+import { useFarmStore } from '@/store/farmStore';
 import { syncQueue } from '@/offline/syncQueue';
 import { apiClient } from '@/lib/apiClient';
 
@@ -31,14 +32,22 @@ export default function TaskScreen() {
   const { t, i18n } = useTranslation(['tasks', 'common']);
   const isTa = i18n.language === 'ta';
 
-  // 1. Get farm ID context (defaults to empty string for "All Farms")
+  // 1. Get farm ID context from store and query
   const { data: farms = [], isLoading: loadingFarms } = useFarms();
+  const { activeFarmId } = useFarmStore();
   const [selectedFarmId, setSelectedFarmId] = useState<string>('');
-  const farmId = selectedFarmId; 
+
+  useEffect(() => {
+    if (activeFarmId && !selectedFarmId) {
+      setSelectedFarmId(activeFarmId);
+    }
+  }, [activeFarmId]);
+
+  const farmId = selectedFarmId || activeFarmId || '';
   const activeFarm = farms.find(f => f.id === farmId);
 
-  // 2. Fetch fields for the selected farm
-  const { data: fields = [], isLoading: loadingFields } = useFields(farmId || '00000000-0000-0000-0000-000000000000');
+  // 2. Fetch fields for the selected farm (omit farmId if All Farms is selected)
+  const { data: fields = [], isLoading: loadingFields } = useFields(farmId || undefined);
 
   // 3. Fetch workers to populate dropdowns
   const [users, setUsers] = useState<any[]>([]);

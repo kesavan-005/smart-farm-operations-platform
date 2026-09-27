@@ -10,6 +10,7 @@ import {
 import { useFarms } from '@/features/farms/api/farmsApi';
 import { useFields } from '@/features/fields/api/fieldsApi';
 import { useProfile, useMyFarmRoles } from '@/features/auth/api/profileApi';
+import { useFarmStore } from '@/store/farmStore';
 import { syncQueue } from '@/offline/syncQueue';
 
 import {
@@ -29,14 +30,22 @@ export default function ActivityScreen() {
   const { t, i18n } = useTranslation(['activities', 'common']);
   const isTa = i18n.language === 'ta';
 
-  // 1. Get farm ID context (default to first active farm)
+  // 1. Get farm ID context from store and farm query
   const { data: farms = [], isLoading: loadingFarms } = useFarms();
+  const { activeFarmId } = useFarmStore();
   const [selectedFarmId, setSelectedFarmId] = useState<string>('');
-  const farmId = selectedFarmId; // Can be "" for "All Farms"
+
+  useEffect(() => {
+    if (activeFarmId && !selectedFarmId) {
+      setSelectedFarmId(activeFarmId);
+    }
+  }, [activeFarmId]);
+
+  const farmId = selectedFarmId || activeFarmId || '';
   const activeFarm = farms.find(f => f.id === farmId);
 
-  // 2. Fetch fields for the selected farm (use nil UUID if All Farms is selected to avoid backend parsing errors)
-  const { data: fields = [], isLoading: loadingFields } = useFields(farmId || '00000000-0000-0000-0000-000000000000');
+  // 2. Fetch fields for the selected farm (omit farmId if All Farms is selected to fetch all user fields)
+  const { data: fields = [], isLoading: loadingFields } = useFields(farmId || undefined);
 
   // 4. Manage user roles & profile for permission checking
   const { data: profile } = useProfile();

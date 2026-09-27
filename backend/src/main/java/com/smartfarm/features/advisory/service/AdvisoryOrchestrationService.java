@@ -42,9 +42,17 @@ public class AdvisoryOrchestrationService {
             throw new IllegalArgumentException("question must not be blank");
         }
 
+        long totalStart = System.currentTimeMillis();
+        log.info("Starting AI advisory generation for farmId={} (questionLength={})", request.getFarmId(), request.getQuestion().length());
+
         try {
             // 1. Build context (includes authorization & semantic retrieval)
+            long contextStart = System.currentTimeMillis();
             AdvisoryContext context = contextAssembler.assemble(request, userId);
+            long contextDuration = System.currentTimeMillis() - contextStart;
+            int retrievedCount = context.getRetrievedKnowledge() != null ? context.getRetrievedKnowledge().size() : 0;
+            log.info("Context assembly completed in {}ms for farmId={}: retrieved {} knowledge chunks, weatherAvailable={}",
+                    contextDuration, request.getFarmId(), retrievedCount, context.getFarmContext().getWeather() != null);
 
             // 2. Build prompt
             Prompt prompt = promptBuilder.buildPrompt(context);
@@ -58,7 +66,10 @@ public class AdvisoryOrchestrationService {
             Prompt promptWithOptions = new Prompt(prompt.getInstructions(), options);
 
             // 4. Call LLM
+            long llmStart = System.currentTimeMillis();
             ChatResponse chatResponse = chatModel.call(promptWithOptions);
+            long llmDuration = System.currentTimeMillis() - llmStart;
+            log.info("LLM inference completed in {}ms for farmId={}", llmDuration, request.getFarmId());
             
             if (chatResponse == null || chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null) {
                 throw new AdvisoryGenerationException("LLM returned an empty response.");
@@ -70,6 +81,9 @@ public class AdvisoryOrchestrationService {
             List<AdvisorySource> sources = mapSources(context.getRetrievedKnowledge());
             
             boolean weatherUsed = context.getFarmContext().getWeather() != null;
+            long totalDuration = System.currentTimeMillis() - totalStart;
+            log.info("AI advisory generated successfully in {}ms for farmId={}, sourcesAttached={}",
+                    totalDuration, request.getFarmId(), sources.size());
 
             return AdvisoryResponse.builder()
                     .answer(answer)
@@ -77,15 +91,16 @@ public class AdvisoryOrchestrationService {
                     .weatherUsed(weatherUsed)
                     .build();
                     
-        } catch (IllegalArgumentException | SecurityException e) {
-            // Let validation and security exceptions bubble up naturally
+        } catch (IllegalArgumentException | SecurityException | AdvisoryGenerationException e) {
+            // Let validation, security, and domain advisory exceptions bubble up naturally
             throw e;
         } catch (org.springframework.security.access.AccessDeniedException e) {
             throw e;
         } catch (com.smartfarm.common.exception.ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Failed to generate advisory", e);
+            long totalDuration = System.currentTimeMillis() - totalStart;
+            log.error("Failed to generate advisory after {}ms for farmId={}: {}", totalDuration, request.getFarmId(), e.getMessage(), e);
             throw new AdvisoryGenerationException("Failed to generate agricultural advisory due to an internal error.", e);
         }
     }

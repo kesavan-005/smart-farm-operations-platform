@@ -76,7 +76,7 @@ import org.springframework.test.context.TestPropertySource;
     "smartfarm.knowledge.ingestion.chunk-overlap=0",
     "spring.ai.vectorstore.pgvector.initialize-schema=true",
     "spring.ai.vectorstore.pgvector.table-name=vector_store",
-    "spring.ai.vectorstore.pgvector.dimensions=1536",
+    "spring.ai.vectorstore.pgvector.dimensions=384",
     "spring.ai.vectorstore.pgvector.distance-type=COSINE_DISTANCE",
     "spring.ai.vectorstore.pgvector.index-type=HNSW",
     "smartfarm.knowledge.retrieval.max-distance=0.4"
@@ -91,7 +91,7 @@ class AdvisoryPerformanceTest {
     static final long SIMULATED_LLM_DELAY_MS = 50;
 
     // ========= Deterministic Embeddings =========
-    static final int DIM = 1536;
+    static final int DIM = 384;
     static float[] createVector(float v0, float v1, float v2) {
         float[] v = new float[DIM];
         v[0] = v0; v[1] = v1; v[2] = v2;
@@ -358,7 +358,7 @@ class AdvisoryPerformanceTest {
         env.append("Spring Boot: ").append(springBootVersion).append("\n");
         env.append("PostgreSQL: ").append(pgVersion).append("\n");
         env.append("pgvector: ").append(pgvectorVersion).append("\n");
-        env.append("Vector dimensions: 1536\n");
+        env.append("Vector dimensions: 384\n");
         env.append("Distance type: COSINE_DISTANCE\n");
         env.append("Index type: HNSW\n");
         env.append("Test documents: ").append(docCount).append("\n");

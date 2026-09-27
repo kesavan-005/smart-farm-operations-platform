@@ -72,6 +72,18 @@ public class KnowledgeDocument {
     @Column(name = "source_url", columnDefinition = "TEXT")
     private String sourceUrl;
 
+    @Column(name = "original_filename", length = 255)
+    private String originalFilename;
+
+    @Column(name = "content_type", length = 100)
+    private String contentType;
+
+    @Column(name = "file_size_bytes")
+    private Long fileSizeBytes;
+
+    @Column(name = "storage_path", length = 500)
+    private String storagePath;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default

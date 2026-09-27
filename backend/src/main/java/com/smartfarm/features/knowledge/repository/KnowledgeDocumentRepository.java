@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocument, UUID>, JpaSpecificationExecutor<KnowledgeDocument> {
     List<KnowledgeDocument> findByStatus(DocumentStatus status);
+    long countByStatus(DocumentStatus status);
     List<KnowledgeDocument> findByCrop(String crop);
     List<KnowledgeDocument> findByTopic(KnowledgeTopic topic);
     List<KnowledgeDocument> findByLanguage(KnowledgeLanguage language);

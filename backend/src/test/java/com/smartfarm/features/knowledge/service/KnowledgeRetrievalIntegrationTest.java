@@ -47,14 +47,14 @@ import org.springframework.test.context.TestPropertySource;
     "smartfarm.knowledge.ingestion.chunk-overlap=50",
     "spring.ai.vectorstore.pgvector.initialize-schema=true",
     "spring.ai.vectorstore.pgvector.table-name=vector_store",
-    "spring.ai.vectorstore.pgvector.dimensions=1536",
+    "spring.ai.vectorstore.pgvector.dimensions=384",
     "spring.ai.vectorstore.pgvector.distance-type=COSINE_DISTANCE",
     "spring.ai.vectorstore.pgvector.index-type=HNSW"
 })
 @DisplayName("Phase 4A-1 - Knowledge Retrieval & PgVectorStore Real Integration Test")
 class KnowledgeRetrievalIntegrationTest {
 
-    static final int DIMENSION = 1536;
+    static final int DIMENSION = 384;
 
     static float[] createTestVector() {
         float[] v = new float[DIMENSION];

@@ -55,14 +55,14 @@ import org.springframework.test.context.TestPropertySource;
     "smartfarm.knowledge.ingestion.chunk-overlap=50",
     "spring.ai.vectorstore.pgvector.initialize-schema=true",
     "spring.ai.vectorstore.pgvector.table-name=vector_store",
-    "spring.ai.vectorstore.pgvector.dimensions=1536",
+    "spring.ai.vectorstore.pgvector.dimensions=384",
     "spring.ai.vectorstore.pgvector.distance-type=COSINE_DISTANCE",
     "spring.ai.vectorstore.pgvector.index-type=HNSW"
 })
 @DisplayName("Phase 3B - Knowledge Ingestion & PgVectorStore Real Integration Test")
 class KnowledgeIngestionIntegrationTest {
 
-    static final int DIMENSION = 1536;
+    static final int DIMENSION = 384;
 
     static float[] createTestVector() {
         float[] v = new float[DIMENSION];
@@ -135,6 +135,8 @@ class KnowledgeIngestionIntegrationTest {
     @AfterEach
     void cleanUp() {
         jdbcTemplate.execute("DELETE FROM vector_store WHERE metadata->>'title' LIKE 'Integration Test%'");
+        jdbcTemplate.execute("DELETE FROM knowledge_chunks WHERE document_id IN (SELECT id FROM knowledge_documents WHERE title LIKE 'Integration Test%')");
+        jdbcTemplate.execute("DELETE FROM knowledge_documents WHERE title LIKE 'Integration Test%'");
     }
 
     @Test

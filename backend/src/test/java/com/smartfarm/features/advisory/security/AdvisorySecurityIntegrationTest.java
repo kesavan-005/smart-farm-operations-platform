@@ -77,7 +77,7 @@ import org.springframework.test.context.TestPropertySource;
     "smartfarm.knowledge.ingestion.chunk-overlap=0",
     "spring.ai.vectorstore.pgvector.initialize-schema=true",
     "spring.ai.vectorstore.pgvector.table-name=vector_store",
-    "spring.ai.vectorstore.pgvector.dimensions=1536",
+    "spring.ai.vectorstore.pgvector.dimensions=384",
     "spring.ai.vectorstore.pgvector.distance-type=COSINE_DISTANCE",
     "spring.ai.vectorstore.pgvector.index-type=HNSW",
     "smartfarm.knowledge.retrieval.max-distance=0.4"
@@ -87,7 +87,7 @@ import org.springframework.test.context.TestPropertySource;
 class AdvisorySecurityIntegrationTest {
 
     // ========= Deterministic Embeddings =========
-    static final int DIM = 1536;
+    static final int DIM = 384;
     static float[] createVector(float v0, float v1, float v2) {
         float[] v = new float[DIM];
         v[0] = v0; v[1] = v1; v[2] = v2;

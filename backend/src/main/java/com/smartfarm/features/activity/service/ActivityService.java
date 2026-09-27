@@ -292,6 +292,9 @@ public class ActivityService {
         }
 
         if (farmId != null) {
+            if (farmId.equals(new UUID(0L, 0L))) {
+                return Page.empty(pageable);
+            }
             spec = spec.and((root, query, cb) -> cb.equal(root.get("farm").get("id"), farmId));
         }
         if (fieldId != null) {

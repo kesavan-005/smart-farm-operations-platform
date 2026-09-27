@@ -177,6 +177,9 @@ public class TaskService {
 
             // Apply farm filter
             if (farmId != null) {
+                if (farmId.equals(new UUID(0L, 0L))) {
+                    return Page.empty(pageable);
+                }
                 if (!accessibleFarmIds.contains(farmId)) {
                     throw new AccessDeniedException("Access denied to requested farm");
                 }
@@ -199,7 +202,7 @@ public class TaskService {
                 List<Predicate> farmPredicates = new ArrayList<>();
                 for (UUID fid : accessibleFarmIds) {
                     Farm farm = farmMap.get(fid);
-                    boolean isFarmOwner = farm != null && farm.getOwner().getId().equals(userId);
+                    boolean isFarmOwner = farm != null && farm.getOwner() != null && farm.getOwner().getId().equals(userId);
 
                     if (isFarmOwner) {
                         farmPredicates.add(cb.equal(root.get("farm").get("id"), fid));

@@ -83,8 +83,8 @@ class KnowledgeRetrievalServiceTest {
 
     static class StubEmbeddingModel implements org.springframework.ai.embedding.EmbeddingModel {
         public org.springframework.ai.embedding.EmbeddingResponse call(org.springframework.ai.embedding.EmbeddingRequest request) { return null; }
-        public float[] embed(Document document) { return new float[1536]; }
-        public int dimensions() { return 1536; }
+        public float[] embed(Document document) { return new float[384]; }
+        public int dimensions() { return 384; }
     }
 
     @Test

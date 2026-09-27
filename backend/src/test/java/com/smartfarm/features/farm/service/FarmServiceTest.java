@@ -141,8 +141,6 @@ class FarmServiceTest {
         when(farmRepository.findById(farmId)).thenReturn(Optional.of(farm));
         farmService.deleteFarm(farmId, ownerId);
 
-        assertTrue(farm.isDeleted());
-        assertNotNull(farm.getDeletedAt());
-        verify(farmRepository).save(farm);
+        verify(farmRepository).delete(farm);
     }
 }

@@ -1,0 +1,17 @@
+{
+  "documents": [
+    {
+      "filePath": "tnau/neutral-crop-guide.txt",
+      "title": "Test Agricultural Guidance 2026",
+      "source": "Tamil Nadu Agricultural University",
+      "sourceType": "AGRICULTURAL_UNIVERSITY",
+      "language": "ENGLISH",
+      "crop": "Paddy",
+      "topic": "CROP_MANAGEMENT",
+      "authority": "TNAU Directorate",
+      "version": "2026.1",
+      "publishedDate": "2026-01-15",
+      "status": "ACTIVE"
+    }
+  ]
+}

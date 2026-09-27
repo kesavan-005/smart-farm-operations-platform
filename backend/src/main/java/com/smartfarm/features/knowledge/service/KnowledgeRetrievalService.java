@@ -78,9 +78,18 @@ public class KnowledgeRetrievalService {
                 .filterExpression(op.build())
                 .build();
 
-        List<Document> documents = vectorStore.similaritySearch(searchRequest);
+        long start = System.currentTimeMillis();
+        List<Document> documents;
+        try {
+            documents = vectorStore.similaritySearch(searchRequest);
+        } catch (Exception e) {
+            log.error("PgVector similarity search encountered an error for query '{}': {}", request.getQuery(), e.getMessage());
+            throw new RuntimeException("Vector database query failed during semantic knowledge retrieval", e);
+        }
 
-        log.debug("Found {} documents for query: '{}'", documents.size(), request.getQuery());
+        long durationMs = System.currentTimeMillis() - start;
+        log.info("PgVector semantic search completed in {}ms: returned {} chunks for query='{}' (topK={}, threshold={})",
+                durationMs, documents.size(), request.getQuery(), request.getTopK(), maxDistance);
 
         return documents.stream()
                 .map(this::mapToResult)

@@ -25,6 +25,8 @@
         <springdoc.version>2.5.0</springdoc.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <spring-ai.version>1.0.9</spring-ai.version>
+        <minio.version>8.5.10</minio.version>
+        <tika.version>2.9.2</tika.version>
     </properties>
 
     <dependencyManagement>
@@ -166,6 +168,35 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-transformers</artifactId>
+        </dependency>
+
+        <!-- MinIO Java SDK for Document Storage -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>${minio.version}</version>
+        </dependency>
+
+        <!-- Apache Tika Document Extraction -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>${tika.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parser-pdf-module</artifactId>
+            <version>${tika.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parser-microsoft-module</artifactId>
+            <version>${tika.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parser-text-module</artifactId>
+            <version>${tika.version}</version>
         </dependency>
 
         <!-- Test -->

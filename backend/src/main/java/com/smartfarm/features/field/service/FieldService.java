@@ -92,6 +92,9 @@ public class FieldService {
         Specification<Field> spec = Specification.where(null);
 
         if (farmId != null) {
+            if (farmId.equals(new UUID(0L, 0L))) {
+                return Page.empty(pageable);
+            }
             if (!farmAuthorizationService.hasModuleAccess(userId, farmId, FarmModule.OPERATIONS, ModuleAccessLevel.VIEW_ONLY)) {
                 throw new AccessDeniedException("Access denied to view fields in this farm");
             }

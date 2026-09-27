@@ -13,5 +13,6 @@ public interface KnowledgeChunkRepository extends JpaRepository<KnowledgeChunk, 
     List<KnowledgeChunk> findByDocumentOrderByChunkIndexAsc(KnowledgeDocument document);
     List<KnowledgeChunk> findByDocument_IdOrderByChunkIndexAsc(UUID documentId);
     Optional<KnowledgeChunk> findByDocument_IdAndChunkIndex(UUID documentId, Integer chunkIndex);
+    long countByDocument_Id(UUID documentId);
     void deleteByDocument_Id(UUID documentId);
 }

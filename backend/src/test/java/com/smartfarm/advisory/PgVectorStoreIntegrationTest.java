@@ -34,7 +34,7 @@ import org.springframework.test.context.TestPropertySource;
  * <p>Verifies end-to-end integration with PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8.6:
  * <ol>
  *   <li>Vector extension (V18) is enabled.
- *   <li>{@link PgVectorStore} initializes {@code vector_store} table with HNSW index and 1536-dim vector column.
+ *   <li>{@link PgVectorStore} initializes {@code vector_store} table with HNSW index and 384-dim vector column.
  *   <li>Vector insertion succeeds.
  *   <li>Similarity search retrieval returns stored document.
  * </ol>
@@ -49,16 +49,16 @@ import org.springframework.test.context.TestPropertySource;
     "spring.flyway.enabled=true",
     "spring.ai.vectorstore.pgvector.initialize-schema=true",
     "spring.ai.vectorstore.pgvector.table-name=vector_store",
-    "spring.ai.vectorstore.pgvector.dimensions=1536",
+    "spring.ai.vectorstore.pgvector.dimensions=384",
     "spring.ai.vectorstore.pgvector.distance-type=COSINE_DISTANCE",
     "spring.ai.vectorstore.pgvector.index-type=HNSW"
 })
 class PgVectorStoreIntegrationTest {
 
-  static final int DIMENSION = 1536;
+  static final int DIMENSION = 384;
 
   /**
-   * Stub EmbeddingModel returning 1536-dimensional zero vectors.
+   * Stub EmbeddingModel returning 384-dimensional zero vectors.
    * Eliminates dependence on external OpenAI API keys during testing.
    */
   static float[] createTestVector() {

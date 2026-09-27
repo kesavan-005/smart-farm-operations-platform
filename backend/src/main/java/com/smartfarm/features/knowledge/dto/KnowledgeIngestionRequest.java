@@ -48,6 +48,14 @@ public class KnowledgeIngestionRequest {
 
     private String sourceUrl;
 
+    private String originalFilename;
+
+    private String contentType;
+
+    private Long fileSizeBytes;
+
+    private String storagePath;
+
     @Builder.Default
     private DocumentStatus status = DocumentStatus.DRAFT;
 

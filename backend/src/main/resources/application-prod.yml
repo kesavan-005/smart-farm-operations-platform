@@ -25,20 +25,13 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
 # ─── Spring AI ────────────────────────────────────────────────────────────────
-# Embedding provider: OpenAI text-embedding-3-small (dimension = 1536)
-# Set OPENAI_API_KEY in environment — never hardcode.
+# Embedding provider: Local TransformersEmbeddingModel all-MiniLM-L6-v2 (dimension = 384)
 spring.ai:
-  openai:
-    api-key: ${OPENAI_API_KEY:}
-    embedding:
-      options:
-        model: text-embedding-3-small
-
   vectorstore:
     pgvector:
-      # Must match the embedding dimension of text-embedding-3-small
-      dimensions: 1536
-      # Cosine distance is the standard choice for OpenAI embeddings
+      # Matches the embedding dimension of all-MiniLM-L6-v2 (384 dimensions)
+      dimensions: 384
+      # Cosine distance is the standard choice for embeddings
       distance-type: COSINE_DISTANCE
       # Let Spring AI create/validate the table on startup; Flyway already created the extension
       initialize-schema: true
